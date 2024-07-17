@@ -1,0 +1,39 @@
+%YAML:1.0
+---
+rotation_resolution: 0.01
+
+trans_window_x: 5
+trans_window_y: 0
+trans_window_z: 5
+rot_window_yaw: 20
+rot_window_pitch: 0
+rot_window_roll: 0
+
+min_delta_rou: 1
+min_delta_phi: 0.0005
+
+weight_translation: 1e5
+weight_rotation: 1e14
+#weight_translation: 0
+#weight_rotation: 0
+
+min_CSM_count: 100
+max_CSM_score: 3e4
+
+#rotation_resolution: 0.02
+
+#trans_window_x: 3
+#trans_window_y: 0
+#trans_window_z: 3
+#rot_window_yaw: 10
+#rot_window_pitch: 0
+#rot_window_roll: 0
+
+#min_delta_rou: 1
+#min_delta_phi: 0.0005
+
+#weight_translation: 1e3
+#weight_rotation: 1e5
+
+#min_CSM_count: 100
+#max_CSM_score: 3e4

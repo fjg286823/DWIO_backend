@@ -1,0 +1,13 @@
+%YAML:1.0
+---
+datasets_path: "/media/fjg/feijizhadan/fjg/06/"
+depth_cutoff_distance_max: 3000.
+depth_cutoff_distance_min: 600.
+voxel_resolution: 10.
+truncated_size: 60.
+voxel_size_x: 1800.
+voxel_size_y: 100.
+voxel_size_z: 1800.
+init_x: 0.
+init_y: 0.
+init_z: 0.
