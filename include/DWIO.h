@@ -61,9 +61,16 @@ namespace DWIO {
 
         DWIO::Submap GetSubmap(DWIO::ITMScene<ITMVoxel_d, ITMVoxelBlockHash>* scene,Eigen::Matrix4d pose_,u_int32_t& submap_index);
 
+        DWIO::submap get_submap(DWIO::ITMScene<ITMVoxel_d, ITMVoxelBlockHash>* scene,Eigen::Matrix4d pose_,u_int32_t& submap_index);
+
         void SaveGlobalMap(std::map<uint32_t,DWIO::Submap>&multi_submaps);
+        void SaveGlobalMap(std::map<uint32_t,DWIO::submap>&submaps_);
+        void SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps);
+        void SaveGlobalMapByVoxel2(std::map<uint32_t,DWIO::submap>&submaps_);
+        void SaveGlobalMap2(std::map<uint32_t,DWIO::Submap>&multi_submaps);
+
         void FuseSubmaps(ITMHashEntry* GlobalHashTable,ITMVoxel_d* GlobalVoxelData,DWIO::Submap& submap);
-        void CheckGlobalMap(ITMHashEntry* GlobalHashTable,int total);
+        void CheckGlobalMap(const ITMHashEntry* GlobalHashTable,int total);
 
 
 
@@ -105,6 +112,7 @@ namespace DWIO {
         DWIO::ITMMeshingEngine_CPU<ITMVoxel_d> *meshingEngineCpu;
 
         std::map<uint32_t,DWIO::Submap>multi_submaps;//先把子图放这里
+        std::map<uint32_t,DWIO::submap>submaps_;
         uint32_t submap_index = 1;//0表示全局地图
         
 

@@ -27,7 +27,11 @@ namespace DWIO
 
 		uint noTotalTriangles;
 		//static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 12;//* 32 * 16
-		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 200;//* 32 * 16
+#ifdef SUBMAP
+		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 32 * 16;//* 32 * 16
+#else
+		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 12;
+#endif
 		uint noMaxTriangles;
 
 		DWIO::MemoryBlock<Triangle> *triangles;//应该是存放顶点的
@@ -38,8 +42,9 @@ namespace DWIO
 			this->memoryType = memoryType;
 			this->noTotalTriangles = 0;
 			this->noMaxTriangles = maxTriangles;
-
+			std::cout<<"分配内存："<<noMaxTriangles*sizeof(Triangle)/1024/1024<<"m!"<<std::endl;
 			triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, memoryType);//总共只能有这么多顶点2^17*512*3
+			std::cout<<"allocate done!"<<std::endl;
 		}
 
 		void WriteSTL(const char *fileName)

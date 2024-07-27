@@ -5,6 +5,7 @@
 #include "../src/hash/ITMMesh.h"
 #include "../src/hash/ITMScene.h"
 #include "../src/cuda/include/common.h"
+#include "../src/hash/Submap.h"
 namespace DWIO
 {
 	template<class TVoxel>
@@ -12,6 +13,9 @@ namespace DWIO
 	{
 	public:
 		void MeshScene(ITMMesh *mesh, ITMScene<TVoxel, ITMVoxelBlockHash> *scene);
+		void MeshScene(ITMMesh *mesh, TVoxel* globalVBA , ITMHashEntry* hashTable,int noTotalEntries,float factor);
+		void MeshScene(ITMMesh *mesh, std::map<int,DWIO::BlockData>& blocks , ITMHashEntry* hashTable,int noTotalEntries,float factor);
+		void MeshScene_global(ITMMesh *mesh, TVoxel* globalVBA , ITMHashEntry* hashTable,int noTotalEntries,float factor);
 
 		ITMMeshingEngine_CPU(void) { }
 		~ITMMeshingEngine_CPU(void) { }

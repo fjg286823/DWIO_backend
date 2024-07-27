@@ -18,20 +18,21 @@
 #define SDF_BLOCK_SIZE 8                // SDF block size
 #define SDF_BLOCK_SIZE3 512                // SDF_BLOCK_SIZE3 = SDF_BLOCK_SIZE * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE
 
-#define SDF_LOCAL_BLOCK_NUM 0x52000        // Number of locally stored blocks, 0x60000
+#define SDF_LOCAL_BLOCK_NUM 0x42000        // Number of locally stored blocks, 0x60000
 
-// #define SDF_BUCKET_NUM 0x200000            // Number of Hash Bucket, should be 2^n and bigger than SDF_LOCAL_BLOCK_NUM, SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-// #define SDF_HASH_MASK 0x1fffff            // Used for get hashing value of the bucket index,  SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-// #define SDF_EXCESS_LIST_SIZE 0x20000    // Size of excess list, used to handle collisions. Also max offset (unsigned short) value.
-
-#define SDF_BUCKET_NUM 0x2000            // Number of Hash Bucket, should be 2^n and bigger than SDF_LOCAL_BLOCK_NUM, SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-#define SDF_HASH_MASK 0x1fff            // Used for get hashing value of the bucket index,  SDF_HASH_MASK = SDF_BUCKET_NUM - 1
-#define SDF_EXCESS_LIST_SIZE 0x2000    // Size of excess list, used to handle collisions. Also max offset (unsigned short) value.
-
+#ifdef SUBMAP
+    #define SDF_BUCKET_NUM 0x2000           
+    #define SDF_HASH_MASK 0x1fff            
+    #define SDF_EXCESS_LIST_SIZE 0x2000    
+#else
+    #define SDF_BUCKET_NUM 0x100000           // Number of Hash Bucket, should be 2^n and bigger than SDF_LOCAL_BLOCK_NUM, SDF_HASH_MASK = SDF_BUCKET_NUM - 1
+    #define SDF_HASH_MASK 0xfffff             // Used for get hashing value of the bucket index,  SDF_HASH_MASK = SDF_BUCKET_NUM - 1
+    #define SDF_EXCESS_LIST_SIZE 0x10000      // Size of excess list, used to handle collisions. Also max offset (unsigned short) value.
+#endif
 //for global map
-#define MAP_BUCKET_NUM 0x200000           
-#define MAP_HASH_MASK 0x1fffff           
-#define MAP_EXCESS_LIST_SIZE 0x20000  
+#define MAP_BUCKET_NUM 0x100000           
+#define MAP_HASH_MASK 0xfffff           
+#define MAP_EXCESS_LIST_SIZE 0x10000  
 
 
 #define SDF_TRANSFER_BLOCK_NUM 0x2000    // Maximum number of blocks transfered in one swap operation

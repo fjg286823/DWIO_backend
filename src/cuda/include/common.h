@@ -6,6 +6,8 @@
 #define DIVSHORTMAX 0.0000305185f
 #define SHORTMAX 32767 
 
+
+//#define SUBMAP
 struct Vertex
 {
     float3 p;

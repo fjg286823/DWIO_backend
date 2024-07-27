@@ -9,6 +9,7 @@ SET(CUDA_NVCC_DEPEND
  "/home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h"
  "/home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h"
  "/home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h"
+ "/home/fjg/test/DWIO_hash/src/hash/Submap.h"
  "/usr/include/GL/gl.h"
  "/usr/include/GL/glew.h"
  "/usr/include/GL/glu.h"

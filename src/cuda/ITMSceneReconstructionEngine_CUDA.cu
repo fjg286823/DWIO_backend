@@ -586,10 +586,17 @@ bool ITMSceneReconstructionEngine_CUDA<TVoxel>::showHashTableAndVoxelAllocCondit
     cudaFree(block_cpu_device);
     cudaFree(block_gpu_device);
 
+#ifdef SUBMAP
     if(SDF_EXCESS_LIST_SIZE - extraHash <150)
         return true;//应该创立新子图了
     else
         return false;
+#else
+    if(allHash >=15000)
+        return true;//应该创立新子图了
+    else
+        return false;
+#endif
 }
 
 

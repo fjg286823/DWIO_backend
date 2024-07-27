@@ -388,6 +388,105 @@ __device__ inline bool findPointNeighborsCpu(Vector3f *p, float *tsdf, Vector3i 
     return true;
 }
 
+//看这个点周围是否有点，如果周围8个点有一个没点就返回false
+inline bool findPointNeighbors_new_submap(Vector3f *p, float *tsdf, Vector3i blockLocation, 
+                            std::map<int,DWIO::BlockData>& blocks , const ITMHashEntry *hashTable) {
+    int vmIndex;
+    Vector3i localBlockLocation;
+    //printf("2\n");
+    localBlockLocation = blockLocation + Vector3i(0, 0, 0);
+    p[0] = localBlockLocation.cast<float>();//此为体素位置
+    tsdf[0] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);//修改查找逻辑
+    //printf("3\n");
+    if (!vmIndex || tsdf[0] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 0, 0);
+    p[1] = localBlockLocation.cast<float>();
+    tsdf[1] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[1] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 1, 0);
+    p[2] = localBlockLocation.cast<float>();
+    tsdf[2] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[2] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 1, 0);
+    p[3] = localBlockLocation.cast<float>();
+    tsdf[3] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[3] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 0, 1);
+    p[4] = localBlockLocation.cast<float>();
+    tsdf[4] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[4] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 0, 1);
+    p[5] = localBlockLocation.cast<float>();
+    tsdf[5] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[5] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 1, 1);
+    p[6] = localBlockLocation.cast<float>();
+    tsdf[6] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[6] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 1, 1);
+    p[7] = localBlockLocation.cast<float>();
+    tsdf[7] = ITMVoxel_d::valueToFloat(readVoxel_new_submap(blocks, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[7] == 1.0f) return false;
+
+    return true;
+}
+
+template<class TVoxel>
+//看这个点周围是否有点，如果周围8个点有一个没点就返回false
+ inline bool findPointNeighborsGlobal(Vector3f *p, float *tsdf, Vector3i blockLocation, const TVoxel *globalVBA, const ITMHashEntry *hashTable) {
+    int vmIndex;
+    Vector3i localBlockLocation;
+    //printf("2\n");
+    localBlockLocation = blockLocation + Vector3i(0, 0, 0);
+    p[0] = localBlockLocation.cast<float>();//此为体素位置
+    tsdf[0] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);//修改查找逻辑
+    //printf("3\n");
+    if (!vmIndex || tsdf[0] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 0, 0);
+    p[1] = localBlockLocation.cast<float>();
+    tsdf[1] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[1] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 1, 0);
+    p[2] = localBlockLocation.cast<float>();
+    tsdf[2] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[2] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 1, 0);
+    p[3] = localBlockLocation.cast<float>();
+    tsdf[3] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[3] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 0, 1);
+    p[4] = localBlockLocation.cast<float>();
+    tsdf[4] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[4] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 0, 1);
+    p[5] = localBlockLocation.cast<float>();
+    tsdf[5] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[5] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(1, 1, 1);
+    p[6] = localBlockLocation.cast<float>();
+    tsdf[6] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[6] == 1.0f) return false;
+
+    localBlockLocation = blockLocation + Vector3i(0, 1, 1);
+    p[7] = localBlockLocation.cast<float>();
+    tsdf[7] = TVoxel::valueToFloat(readVoxelGlobal(globalVBA, hashTable, localBlockLocation, vmIndex).tsdf);
+    if (!vmIndex || tsdf[7] == 1.0f) return false;
+
+    return true;
+}
 
 
 __device__ inline Vertex sdfInterp(const Vector3f &p1, const Vector3f &p2, float valp1, float valp2, float factor, float3 color) {
@@ -478,6 +577,94 @@ buildVertListCpu(Vertex *vertList, Vector3i globalPos, Vector3i localPos, const 
     int vmIndex;
 
     TVoxel v = readVoxelCpu(localVBA, hashTable, globalPos + localPos, vmIndex);
+    float3 color;
+    color.x = static_cast<float>(v.clr.x);
+    color.y = static_cast<float>(v.clr.y);
+    color.z = static_cast<float>(v.clr.z);
+
+    int cubeIndex = 0;
+    if (tsdfVals[0] < 0) cubeIndex |= 1;
+    if (tsdfVals[1] < 0) cubeIndex |= 2;
+    if (tsdfVals[2] < 0) cubeIndex |= 4;
+    if (tsdfVals[3] < 0) cubeIndex |= 8;
+    if (tsdfVals[4] < 0) cubeIndex |= 16;
+    if (tsdfVals[5] < 0) cubeIndex |= 32;
+    if (tsdfVals[6] < 0) cubeIndex |= 64;
+    if (tsdfVals[7] < 0) cubeIndex |= 128;
+
+    if (edgeTable[cubeIndex] == 0) return -1;
+
+    if (edgeTable[cubeIndex] & 1) vertList[0] = sdfInterp(points[0], points[1], tsdfVals[0], tsdfVals[1], factor, color);
+    if (edgeTable[cubeIndex] & 2) vertList[1] = sdfInterp(points[1], points[2], tsdfVals[1], tsdfVals[2], factor, color);
+    if (edgeTable[cubeIndex] & 4) vertList[2] = sdfInterp(points[2], points[3], tsdfVals[2], tsdfVals[3], factor, color);
+    if (edgeTable[cubeIndex] & 8) vertList[3] = sdfInterp(points[3], points[0], tsdfVals[3], tsdfVals[0], factor, color);
+    if (edgeTable[cubeIndex] & 16) vertList[4] = sdfInterp(points[4], points[5], tsdfVals[4], tsdfVals[5], factor, color);
+    if (edgeTable[cubeIndex] & 32) vertList[5] = sdfInterp(points[5], points[6], tsdfVals[5], tsdfVals[6], factor, color);
+    if (edgeTable[cubeIndex] & 64) vertList[6] = sdfInterp(points[6], points[7], tsdfVals[6], tsdfVals[7], factor, color);
+    if (edgeTable[cubeIndex] & 128) vertList[7] = sdfInterp(points[7], points[4], tsdfVals[7], tsdfVals[4], factor, color);
+    if (edgeTable[cubeIndex] & 256) vertList[8] = sdfInterp(points[0], points[4], tsdfVals[0], tsdfVals[4], factor, color);
+    if (edgeTable[cubeIndex] & 512) vertList[9] = sdfInterp(points[1], points[5], tsdfVals[1], tsdfVals[5], factor, color);
+    if (edgeTable[cubeIndex] & 1024) vertList[10] = sdfInterp(points[2], points[6], tsdfVals[2], tsdfVals[6], factor, color);
+    if (edgeTable[cubeIndex] & 2048) vertList[11] = sdfInterp(points[3], points[7], tsdfVals[3], tsdfVals[7], factor, color);
+
+    return cubeIndex;
+}
+
+template<class TVoxel>
+__device__ inline int buildVertListGlobal(Vertex *vertList, Vector3i globalPos, Vector3i localPos, const TVoxel *globalVBA, const ITMHashEntry *hashTable, float factor) {
+    Vector3f points[8];
+    float tsdfVals[8];
+    //如果当前点周围8个点有一个没在在gpu中，则返回
+    if (!findPointNeighborsGlobal(points, tsdfVals, globalPos + localPos, globalVBA, hashTable)) return -1;
+
+    int vmIndex;
+
+    TVoxel v = readVoxelGlobal(globalVBA, hashTable, globalPos + localPos, vmIndex);
+    float3 color;
+    color.x = static_cast<float>(v.clr.x);
+    color.y = static_cast<float>(v.clr.y);
+    color.z = static_cast<float>(v.clr.z);
+
+    int cubeIndex = 0;
+    if (tsdfVals[0] < 0) cubeIndex |= 1;
+    if (tsdfVals[1] < 0) cubeIndex |= 2;
+    if (tsdfVals[2] < 0) cubeIndex |= 4;
+    if (tsdfVals[3] < 0) cubeIndex |= 8;
+    if (tsdfVals[4] < 0) cubeIndex |= 16;
+    if (tsdfVals[5] < 0) cubeIndex |= 32;
+    if (tsdfVals[6] < 0) cubeIndex |= 64;
+    if (tsdfVals[7] < 0) cubeIndex |= 128;
+
+    if (edgeTable[cubeIndex] == 0) return -1;
+
+    if (edgeTable[cubeIndex] & 1) vertList[0] = sdfInterp(points[0], points[1], tsdfVals[0], tsdfVals[1], factor, color);
+    if (edgeTable[cubeIndex] & 2) vertList[1] = sdfInterp(points[1], points[2], tsdfVals[1], tsdfVals[2], factor, color);
+    if (edgeTable[cubeIndex] & 4) vertList[2] = sdfInterp(points[2], points[3], tsdfVals[2], tsdfVals[3], factor, color);
+    if (edgeTable[cubeIndex] & 8) vertList[3] = sdfInterp(points[3], points[0], tsdfVals[3], tsdfVals[0], factor, color);
+    if (edgeTable[cubeIndex] & 16) vertList[4] = sdfInterp(points[4], points[5], tsdfVals[4], tsdfVals[5], factor, color);
+    if (edgeTable[cubeIndex] & 32) vertList[5] = sdfInterp(points[5], points[6], tsdfVals[5], tsdfVals[6], factor, color);
+    if (edgeTable[cubeIndex] & 64) vertList[6] = sdfInterp(points[6], points[7], tsdfVals[6], tsdfVals[7], factor, color);
+    if (edgeTable[cubeIndex] & 128) vertList[7] = sdfInterp(points[7], points[4], tsdfVals[7], tsdfVals[4], factor, color);
+    if (edgeTable[cubeIndex] & 256) vertList[8] = sdfInterp(points[0], points[4], tsdfVals[0], tsdfVals[4], factor, color);
+    if (edgeTable[cubeIndex] & 512) vertList[9] = sdfInterp(points[1], points[5], tsdfVals[1], tsdfVals[5], factor, color);
+    if (edgeTable[cubeIndex] & 1024) vertList[10] = sdfInterp(points[2], points[6], tsdfVals[2], tsdfVals[6], factor, color);
+    if (edgeTable[cubeIndex] & 2048) vertList[11] = sdfInterp(points[3], points[7], tsdfVals[3], tsdfVals[7], factor, color);
+
+    return cubeIndex;
+}
+
+
+__device__ inline int buildVertList_new_submap(Vertex *vertList, Vector3i globalPos, Vector3i localPos,  
+                        std::map<int,DWIO::BlockData>& blocks, const ITMHashEntry *hashTable, float factor) {
+    Vector3f points[8];
+    float tsdfVals[8];
+    //如果当前点周围8个点有一个没在在gpu中，则返回
+    //if (!findPointNeighbors(points, tsdfVals, globalPos + localPos, localVBA, hashTable)) return -1;
+    if (!findPointNeighbors_new_submap(points, tsdfVals, globalPos + localPos, blocks, hashTable)) return -1;
+
+    int vmIndex;
+
+    ITMVoxel_d v = readVoxel_new_submap(blocks, hashTable, globalPos + localPos, vmIndex);
     float3 color;
     color.x = static_cast<float>(v.clr.x);
     color.y = static_cast<float>(v.clr.y);

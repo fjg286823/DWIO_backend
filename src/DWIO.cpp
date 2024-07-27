@@ -88,14 +88,11 @@ namespace DWIO {
         m_INS.GetInitialPose(m_pose, m_data_config.init_position.y);
         Eigen::Matrix4d interpolatePose = m_pose;
         GlobalPose = m_pose;
-        // std::cout<<"initial pose: "<<std::endl;
-        // std::cout<<scene->initial_pose<< std::endl;
-        // std::cout<<scene->initial_pose.inverse()<<std::endl;
+        if(m_num_frame==0)
+        {
+            scene->initial_pose = m_pose;
+        }
         m_pose = scene->initial_pose.inverse() * m_pose;//转到子图坐标系了
-        std::cout<<" 2d pose: "<<std::endl;
-        std::cout<<GlobalPose<< std::endl;
-        std::cout<<"submap pose: "<<std::endl;
-        std::cout<<m_pose<<std::endl;
 
         int submap_size[] = {0, 0, 0, 0, 0, 0};
         internal::cuda::MapSegmentation(m_frame_data.vertex_map,
@@ -108,7 +105,7 @@ namespace DWIO {
         camera_intrinsic(1, 0) = m_camera_config.focal_y;
         camera_intrinsic(2, 0) = m_camera_config.principal_x;
         camera_intrinsic(3, 0) = m_camera_config.principal_y;
-        //需要看下分配逻辑了
+
         sceneRecoEngine->AllocateScene(scene,
                                        m_frame_data.depth_map,
                                        m_pose,
@@ -201,43 +198,21 @@ namespace DWIO {
             bool NewSubmap = sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
             if(NewSubmap)
             {
-                //最好保存一下每个子图然后拼接看看，看看每个子图有没有问题
                 std::cout<<"**************创建子图！********************"<<std::endl;
                 //复制scene的数据到子图结构中,需要先把所有数据转到cpu
                 swapEngine->MoveVoxelToGlobalMemorey(scene,renderState_vh);
-                Submap submap = GetSubmap(scene,GlobalPose,submap_index);//应该是全局位姿
-
-                 //生成每一个子图的点云，用于检查实现是否正确
-                // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-                // scene->index.GpuToCpuHashData();//复制一份hash表到cpu，
-                // meshingEngineCpu->MeshScene(mesh_cpu, scene);
-                // mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(submap_index)+"-scene.ply");
-                std::cout<<"submap generate done!"<<std::endl;
-
+#ifdef SUBMAP
+                DWIO::Submap submap = GetSubmap(scene,scene->initial_pose,submap_index);//应该是全局位姿
+#else
+                DWIO::submap new_submap = get_submap(scene,scene->initial_pose,submap_index);//这样一次需要的时间也太久了！
+#endif
+                
                 //清理scene的调用Reset函数，同时把体素数据给清空了
                 sceneRecoEngine->ResetScene(scene);
                 scene->globalCache->ResetVoxelBlocks();
-                //设置scene的initial_pose
-                scene->initial_pose = GlobalPose;//应该是全局位姿
-                // std::cout<<"submap pose: "<<std::endl;
-                // std::cout<<GlobalPose<<std::endl;
-                std::cout<<"submap size: "<<multi_submaps.size()<<std::endl;
                 m_num_frame = 0;//保证每个子图的第一帧直接建图，不定位
-
                 //将子图插入到后端中（写一个函数实现）目前直接在GetSubmap中实现了
             }
-
-            // auto start2 = std::chrono::high_resolution_clock::now();
-            // meshingEngine->MeshScene(mesh, scene,TotalTriangles);//这里没有清除triangles里的点，有点问题
-
-            // auto end2 = std::chrono::high_resolution_clock::now();
-            // std::chrono::duration<double, std::milli> duration2 = end2 - start2;
-            //std::cout << "定位代码执行时间：" << duration2.count() << " 毫秒" << std::endl;
-            //写一个函数把gpu里的点云搞到cpu上，并清除gpu点云,clear()是这里特别慢
-            // mesh->SwapAndClear();
-            // auto end3 = std::chrono::high_resolution_clock::now();
-            // std::chrono::duration<double, std::milli> duration3 = end3 - start2;
-            // std::cout << "提点执行时间：" << duration2.count() << " 毫秒" <<"拷贝时间："<<duration3.count()-duration2.count()<<"毫秒"<< std::endl;
         }
 
         return keyframe.is_tracking_success;
@@ -349,21 +324,31 @@ namespace DWIO {
         // std::cout<<"local points num:"<<local_cloud.num_points<<std::endl;
         // export_ply(m_data_config.datasets_path+"scene.ply",local_cloud);
 
-        //cpu
-        sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
-        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        //cpu - 原来的生成地图
+        // sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
 
-        swapEngine->MoveVoxelToGlobalMemorey(scene,renderState_vh);//把gpu体素转到cpu
-        sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
-        scene->index.GpuToCpuHashData();//复制一份hash表到cpu，
-        ITMHashEntry *hashTable = scene->index.GetEntriesCpu();
-        //得做复制一份cpu体素数据
-        std::cout<<"cpu map generate"<<std::endl;
-        meshingEngineCpu->MeshScene(mesh_cpu, scene);
-        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
+        // swapEngine->MoveVoxelToGlobalMemorey(scene,renderState_vh);//把gpu体素转到cpu
+        // sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
+        // scene->index.GpuToCpuHashData();//复制一份hash表到cpu，
+        // ITMHashEntry *hashTable = scene->index.GetEntriesCpu();
+        // std::cout<<"cpu map generate"<<std::endl;
+        // meshingEngineCpu->MeshScene(mesh_cpu, scene);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
 
-        SaveGlobalMap(multi_submaps);
-
+#ifdef SUBMAP
+        //SaveGlobalMap(multi_submaps);
+        SaveGlobalMapByVoxel(multi_submaps);
+#else
+        SaveGlobalMap(submaps_);
+        //SaveGlobalMapByVoxel2(submaps_);
+#endif
+        //回收内存操作：
+        std::cout<<"free memory!"<<std::endl;
+        multi_submaps.clear();
+        submaps_.clear();
+        std::cout<<"free done"<<std::endl;
+        
     }
 
     DWIO::Submap Pipeline::GetSubmap(DWIO::ITMScene<ITMVoxel_d, ITMVoxelBlockHash>* scene,Eigen::Matrix4d pose_,u_int32_t& submap_index)
@@ -373,41 +358,369 @@ namespace DWIO {
         scene->index.CopyHashEntries(submap.hashEntries_submap);
         multi_submaps[submap_index] = submap;
 
+        //使用赋值的体素和hash表生成地图，用于验证
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // meshingEngineCpu->MeshScene(mesh_cpu,submap.storedVoxelBlocks_submap,submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU),SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE,m_data_config.voxel_resolution);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(submap.submap_id)+ "scene.ply");
+        // std::cout<<"submap save!"<<std::endl;
         submap_index++;
         return submap;
     }
+    //这样的结果是超级耗时！
+    DWIO::submap Pipeline::get_submap(DWIO::ITMScene<ITMVoxel_d, ITMVoxelBlockHash>* scene,Eigen::Matrix4d pose_,u_int32_t& submap_index)
+    {
+        // DWIO::submap* new_submap = new DWIO::submap(pose_,submap_index,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
+        // scene->index.CopyHashEntries(new_submap->hashEntries_submap);
+        // new_submap->genereate_blocks(scene->globalCache->GetVoxelData());
+        // submaps_[submap_index] = new_submap;
 
-//首先融合所有子图的数据到GlobalMap，需要写函数去证明一下，也好写洗完澡回来写
+        //将体素转成子图结构的体素数据，还需要生成子图验证一下，生成子图的代码没变过，那么就是生成submap有问题，是用new搞的？
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // meshingEngineCpu->MeshScene(mesh_cpu ,new_submap->blocks_, new_submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU),SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE,
+        //                             m_data_config.voxel_resolution);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(new_submap->submap_id)+ "scene.ply");
+
+
+        DWIO::submap new_submap(pose_,submap_index,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
+        scene->index.CopyHashEntries(new_submap.hashEntries_submap);
+        new_submap.genereate_blocks(scene->globalCache->GetVoxelData());
+        submaps_[submap_index] = new_submap;
+
+        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        meshingEngineCpu->MeshScene(mesh_cpu ,new_submap.blocks_, new_submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU),SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE,
+                                    m_data_config.voxel_resolution);
+        mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(new_submap.submap_id)+ "scene.ply");
+        submap_index++;
+        std::cout<<"get submap()"<<std::endl;
+        return new_submap;
+    }
+
     void Pipeline::SaveGlobalMap(std::map<uint32_t,DWIO::Submap>&multi_submaps)
     {
         //生成一个全局地图，并开辟新的hash函数
         DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,MAP_BUCKET_NUM,MAP_EXCESS_LIST_SIZE);
         ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
         ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;
+        int nums =0;
+
         for( auto& it : multi_submaps)//遍历每个子图
         {
             auto& submap = it.second;
+            //只保存一张子图看看效果
+            if(submap.submap_id >1)
+            {
+                std::cout<<"only fusion "<<nums<<" submap"<<std::endl;
+                break;
+            }
+            nums++;
             const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);//得到子图的hash表
+            CheckGlobalMap(hashEntries,submap.noTotalEntries);
             //应该再封装一个子函数去实现!
             for(int i=0;i<submap.noTotalEntries;i++)//遍历子图的hash表
             {
+                
                 if(hashEntries[i].ptr<-1) continue;
                 Vector3i submapPos;
                 submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
                 submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
                 submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
                 Vector4f submapPosf;
-                submapPosf(0) = (submapPos.x() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;
-                submapPosf(1) = (submapPos.y() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution; 
-                submapPosf(2) = (submapPos.z() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;  
+                submapPosf(0) = (float)(submapPos.x() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;
+                submapPosf(1) = (float)(submapPos.y() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution; 
+                submapPosf(2) = (float)(submapPos.z() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;  
+                submapPosf(3) = 1.0;
+                Vector4f globalPosef;
+                globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
+                Vector3i globalPose;//在全局坐标系下的block坐标
+                globalPose.x() =  std::round(globalPosef(0) / SDF_BLOCK_SIZE/m_data_config.voxel_resolution);
+                globalPose.y() =  std::round(globalPosef(1) / SDF_BLOCK_SIZE/m_data_config.voxel_resolution);
+                globalPose.z() =  std::round(globalPosef(2) / SDF_BLOCK_SIZE/m_data_config.voxel_resolution);          
+
+                //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
+                int globalHashIndex = hashIndexGlobal(globalPose);
+                //std::cout<<"1"<<std::endl;
+                //std::cout<<"hashindex: "<<globalHashIndex<<std::endl;
+                ITMHashEntry hashEntry = GlobalHashTable[globalHashIndex];
+                //std::cout<<"2"<<std::endl;
+                bool isFound =false;
+                bool isExtra =false;
+
+                if(IS_EQUAL3(hashEntry.pos, globalPose) && hashEntry.ptr >= -1)
+                {
+                    isFound =true;
+                }
+                if(!isFound)//是否在额外链表中
+                {
+                    if(hashEntry.ptr >= -1){
+
+                        while(hashEntry.offset >= 1){
+                            globalHashIndex = MAP_BUCKET_NUM + hashEntry.offset - 1;
+                            hashEntry = GlobalHashTable[globalHashIndex];
+                            if(IS_EQUAL3(hashEntry.pos, globalPose))
+                            {
+                                isFound = true;
+                                break;
+                            }
+                        }
+                        isExtra =true;//用来表示是否是在额外列表区域没找到
+                    }
+                }
+                //std::cout<<"3"<<std::endl;
+                if(isFound)//找到了,且对应的索引为hashIdx
+                {
+                    std::cout<<"found !!!"<<std::endl;
+                    //根据索引取体素，然后融合global和submap
+                    ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                    ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                    for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                        for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                            for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                                
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[locId],128);
+                            }
+                        }
+                    }           
+
+                }
+                else{//没找到
+
+                    //创建hash条目，这里还涉及到额外链表的分配啊
+                    if(isExtra)//hash条目要创建在额外列表的地方
+                    {
+                        ITMHashEntry hashEntry_temp{};
+                        hashEntry_temp.pos.x = globalPose.x();
+                        hashEntry_temp.pos.y = globalPose.y();
+                        hashEntry_temp.pos.z = globalPose.z();
+                        hashEntry_temp.ptr = -1;
+
+                        int exlOffset = GlobalMap.GetExtraListPos();
+                        if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
+                            continue;
+                        
+                        GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
+                        GlobalHashTable[MAP_BUCKET_NUM + exlOffset] = hashEntry_temp; 
+                        globalHashIndex = MAP_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
+                        //std::cout<<"generate a hashEntry"<<std::endl;
+                    }
+                    else{
+                        //顺序部分插入
+                        ITMHashEntry hashEntry_temp{};
+                        hashEntry_temp.pos.x = globalPose.x();
+                        hashEntry_temp.pos.y = globalPose.y();
+                        hashEntry_temp.pos.z = globalPose.z();
+                        hashEntry_temp.ptr = -1;
+                        hashEntry_temp.offset = 0;
+
+                        GlobalHashTable[globalHashIndex] = hashEntry_temp;
+                        //std::cout<<"generate a hashEntry"<<std::endl;
+                    }
+                    //std::cout<<"4"<<std::endl;
+                    ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                    ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                    for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                        for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                            for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                                
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[locId],128);
+                            }
+                        }
+                    } 
+                }
+                
+            }
+        }
+
+        //检查全局地图
+        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+        //在这里生成地图！
+        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        std::cout<<"2"<<std::endl;
+        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
+        std::cout<<"save map successfully!"<<std::endl;
+    }
+
+    void Pipeline::SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps)
+    {
+        //生成一个全局地图，并开辟新的hash函数
+        DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,MAP_BUCKET_NUM,MAP_EXCESS_LIST_SIZE);
+        ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
+        ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;
+        int nums =0;
+
+        for( auto& it : multi_submaps)//遍历每个子图
+        {
+            auto& submap = it.second;
+
+            //只保存一张子图看看效果
+            if(submap.submap_id >1)
+            {
+                std::cout<<"only fusion "<<nums<<" submap"<<std::endl;
+                break;
+            }
+            nums++;
+            const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);//得到子图的hash表
+            CheckGlobalMap(hashEntries,submap.noTotalEntries);
+            //应该再封装一个子函数去实现!
+            for(int i=0;i<submap.noTotalEntries;i++)//遍历子图的hash表
+            {
+                
+                if(hashEntries[i].ptr<-1) continue;
+                for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                    for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                        for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                            Vector3i submapPos;
+                            //体素坐标
+                            submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
+                            submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
+                            submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
+                            Vector4f submapPosf;//该block中每个小体素的世界坐标          
+                            submapPosf(0) = (float)(submapPos.x() + x + 0.5) * m_data_config.voxel_resolution;
+                            submapPosf(1) = (float)(submapPos.y() + y + 0.5) * m_data_config.voxel_resolution; 
+                            submapPosf(2) = (float)(submapPos.z() + z + 0.5) * m_data_config.voxel_resolution;  
+                            submapPosf(3) = 1.0;
+                            Vector4f globalPosef;
+                            Vector3i globalPose;//在全局坐标系下的block坐标
+                            Vector3s globalBlockPose;
+                            globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
+                            globalPose.x() =  std::round(globalPosef(0) / m_data_config.voxel_resolution);
+                            globalPose.y() =  std::round(globalPosef(1) / m_data_config.voxel_resolution);
+                            globalPose.z() =  std::round(globalPosef(2) / m_data_config.voxel_resolution);  
+                            std::cout<<"1"<<std::endl; 
+                            int global_linearIdx = pointToVoxelBlockPosCpu(globalPose, globalBlockPose);
+
+                            //我再换个方法，就是找到global对应的block块后，遍历global的block块中的小体素然后再从submap中找到对应的体素赋值看看会怎么样！
+                            
+                            std::cout<<"2"<<std::endl;
+                            //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
+                            int globalHashIndex = hashIndexGlobal(globalBlockPose);
+                            std::cout<<"3:index "<<globalHashIndex<<std::endl;
+                            ITMHashEntry hashEntry = GlobalHashTable[globalHashIndex];
+
+                            bool isFound =false;
+                            bool isExtra =false;
+
+                            if(IS_EQUAL3(hashEntry.pos, globalBlockPose) && hashEntry.ptr >= -1)
+                            {
+                                isFound =true;
+                            }
+                            if(!isFound)//是否在额外链表中
+                            {
+                                if(hashEntry.ptr >= -1){
+
+                                    while(hashEntry.offset >= 1){
+                                        globalHashIndex = MAP_BUCKET_NUM + hashEntry.offset - 1;
+                                        hashEntry = GlobalHashTable[globalHashIndex];
+                                        if(IS_EQUAL3(hashEntry.pos, globalBlockPose))
+                                        {
+                                            isFound = true;
+                                            break;
+                                        }
+                                    }
+                                    isExtra =true;//用来表示是否是在额外列表区域没找到
+                                }
+                            }
+                            std::cout<<"4"<<std::endl;
+                            if(isFound)//找到了,且对应的索引为hashIdx
+                            {
+                                std::cout<<"found !!!"<<std::endl;
+                                //根据索引取体素，然后融合global和submap
+                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                                            
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
+
+                            }
+                            else{//没找到
+                                //创建hash条目，这里还涉及到额外链表的分配啊
+                                if(isExtra)//hash条目要创建在额外列表的地方
+                                {
+                                    ITMHashEntry hashEntry_temp{};
+                                    hashEntry_temp.pos.x = globalBlockPose.x();
+                                    hashEntry_temp.pos.y = globalBlockPose.y();
+                                    hashEntry_temp.pos.z = globalBlockPose.z();
+                                    hashEntry_temp.ptr = -1;
+
+                                    int exlOffset = GlobalMap.GetExtraListPos();
+                                    if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
+                                        continue;
+                                    
+                                    GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
+                                    GlobalHashTable[MAP_BUCKET_NUM + exlOffset] = hashEntry_temp; 
+                                    globalHashIndex = MAP_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
+                                    //std::cout<<"generate a hashEntry"<<std::endl;
+                                }
+                                else{
+                                    //顺序部分插入
+                                    ITMHashEntry hashEntry_temp{};
+                                    hashEntry_temp.pos.x = globalBlockPose.x();
+                                    hashEntry_temp.pos.y = globalBlockPose.y();
+                                    hashEntry_temp.pos.z = globalBlockPose.z();
+                                    hashEntry_temp.ptr = -1;
+                                    hashEntry_temp.offset = 0;
+
+                                    GlobalHashTable[globalHashIndex] = hashEntry_temp;
+                                    //std::cout<<"generate a hashEntry"<<std::endl;
+                                }
+                                std::cout<<"fusion"<<std::endl;
+                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);                 
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
+                                std::cout<<"5"<<std::endl;
+                            }
+                        }
+                    }
+                }
+                
+            }
+        }
+        //检查全局地图
+        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+        std::cout<<"generate map"<<std::endl;
+        //在这里生成地图！
+        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");        
+    }
+
+    void Pipeline::SaveGlobalMap2(std::map<uint32_t,DWIO::Submap>&multi_submaps)
+    {
+       //生成一个全局地图，并开辟新的hash函数
+        DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,MAP_BUCKET_NUM,MAP_EXCESS_LIST_SIZE);
+        ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
+        ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;
+
+
+        for( auto& it : multi_submaps)//遍历每个子图
+        {
+                   
+            auto& submap = it.second;
+            const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);//得到子图的hash表
+            CheckGlobalMap(hashEntries,submap.noTotalEntries);
+            //应该再封装一个子函数去实现!
+            for(int i=0;i<submap.noTotalEntries;i++)//遍历子图的hash表
+            {
+                
+                if(hashEntries[i].ptr<-1) continue;
+                Vector3i submapPos;
+                submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
+                submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
+                submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
+                Vector4f submapPosf;//          要加这个一半吗
+                submapPosf(0) = (float)(submapPos.x() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;
+                submapPosf(1) = (float)(submapPos.y() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution; 
+                submapPosf(2) = (float)(submapPos.z() + SDF_BLOCK_SIZE/2) * m_data_config.voxel_resolution;  
                 submapPosf(3) = 1.0;
                 Vector4f globalPosef;
                 globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
                 Vector3i globalPose;//在全局坐标系下的block坐标
                 globalPose.x() =  std::round(globalPosef(0) / SDF_BLOCK_SIZE);
                 globalPose.y() =  std::round(globalPosef(1) / SDF_BLOCK_SIZE);
-                globalPose.z() =  std::round(globalPosef(2) / SDF_BLOCK_SIZE);
-
+                globalPose.z() =  std::round(globalPosef(2) / SDF_BLOCK_SIZE);         
 
                 //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
                 int globalHashIndex = hashIndexGlobal(globalPose);
@@ -430,6 +743,7 @@ namespace DWIO {
                             if(IS_EQUAL3(hashEntry.pos, globalPose))
                             {
                                 isFound = true;
+                                break;
                             }
                         }
                         isExtra =true;//用来表示是否是在额外列表区域没找到
@@ -438,15 +752,27 @@ namespace DWIO {
 
                 if(isFound)//找到了,且对应的索引为hashIdx
                 {
-                    //根据索引取体素，然后融合global和submap
-                    ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                    std::cout<<"found !!!"<<std::endl;
+                    //根据索引取体素，然后融合global和submap 
                     ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
                     for (int z = 0; z < SDF_BLOCK_SIZE; z++){
                         for (int y = 0; y < SDF_BLOCK_SIZE; y++){
                             for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
                                 
                                 int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
-                                compute(submap_voxel[locId],global_voxel[locId],128);
+
+                                globalPosef(0) =  (globalPose.x()*SDF_BLOCK_SIZE + x + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(1) =  (globalPose.y()*SDF_BLOCK_SIZE + y + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(2) =  (globalPose.z()*SDF_BLOCK_SIZE + z + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(3) =  1.0;
+                                Vector4f submapPosef = submap.submap_pose.inverse().cast<float>() *globalPosef;
+                                Vector3i submapVoxelPos;
+                                submapVoxelPos.x() = std::round(submapPosef(0)/ m_data_config.voxel_resolution);
+                                submapVoxelPos.y() = std::round(submapPosef(1)/ m_data_config.voxel_resolution);
+                                submapVoxelPos.z() = std::round(submapPosef(2)/ m_data_config.voxel_resolution);
+                                int vmIndex =0;
+                                ITMVoxel_d voxel = readVoxelCpu(submap.storedVoxelBlocks_submap,hashEntries,submapVoxelPos,vmIndex);
+                                compute(voxel,global_voxel[locId],128);
                             }
                         }
                     }           
@@ -469,6 +795,7 @@ namespace DWIO {
                         GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
                         GlobalHashTable[MAP_BUCKET_NUM + exlOffset] = hashEntry_temp; 
                         globalHashIndex = MAP_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
+                        //std::cout<<"generate a hashEntry"<<std::endl;
                     }
                     else{
                         //顺序部分插入
@@ -480,7 +807,114 @@ namespace DWIO {
                         hashEntry_temp.offset = 0;
 
                         GlobalHashTable[globalHashIndex] = hashEntry_temp;
+                        //std::cout<<"generate a hashEntry"<<std::endl;
                     }
+                    ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                    for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                        for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                            for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                                
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+
+                                globalPosef(0) =  (globalPose.x()*SDF_BLOCK_SIZE + x + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(1) =  (globalPose.y()*SDF_BLOCK_SIZE + y + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(2) =  (globalPose.z()*SDF_BLOCK_SIZE + z + 0.5)*m_data_config.voxel_resolution;
+                                globalPosef(3) =  1.0;
+                                Vector4f submapPosef = submap.submap_pose.inverse().cast<float>() *globalPosef;
+                                Vector3i submapVoxelPos;
+                                submapVoxelPos.x() = std::round(submapPosef(0)/ m_data_config.voxel_resolution);
+                                submapVoxelPos.y() = std::round(submapPosef(1)/ m_data_config.voxel_resolution);
+                                submapVoxelPos.z() = std::round(submapPosef(2)/ m_data_config.voxel_resolution);
+                                int vmIndex =0;
+                                ITMVoxel_d voxel = readVoxelCpu(submap.storedVoxelBlocks_submap,hashEntries,submapVoxelPos,vmIndex);
+                                compute(voxel,global_voxel[locId],128);
+                            }
+                        }
+                    }  
+                }
+                
+            }
+        }
+
+        //检查全局地图
+        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+
+        //在这里生成地图！
+        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
+
+    }
+
+    void Pipeline::SaveGlobalMap(std::map<uint32_t,DWIO::submap>&submaps_)
+    {
+        DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
+        ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
+        ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;    
+        int nums =0;
+        for( auto& it : submaps_)
+        {
+            auto& submap = it.second;
+            if(submap.submap_id >1)
+            {
+                std::cout<<"only fusion "<<nums<<" submap"<<std::endl;
+                break;
+            }
+            nums++;
+            const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
+            CheckGlobalMap(hashEntries,submap.noTotalEntries);
+            for(int i=0;i<submap.noTotalEntries;i++)
+            {
+                if(hashEntries[i].ptr<-1) continue;
+                Vector3i submapPos;
+                submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
+                submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
+                submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
+                //这里求global block pos有问题，如果submapPose为负数就不是我想要的解决了，还是直接使用搭配的函数吧
+                Vector4f submapPosf;
+                submapPosf(0) = (float)(submapPos.x() + (submapPos.x()>0 ? SDF_BLOCK_SIZE/2: (-SDF_BLOCK_SIZE/2))) * m_data_config.voxel_resolution;
+                submapPosf(1) = (float)(submapPos.y() + (submapPos.y()>0 ? SDF_BLOCK_SIZE/2: (-SDF_BLOCK_SIZE/2))) * m_data_config.voxel_resolution; 
+                submapPosf(2) = (float)(submapPos.z() + (submapPos.z()>0 ? SDF_BLOCK_SIZE/2: (-SDF_BLOCK_SIZE/2))) * m_data_config.voxel_resolution;  
+                submapPosf(3) = 1.0;
+                Vector4f globalPosef;
+                globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
+                Vector3i globalPose;//在全局坐标系下的block坐标,我草之前怎么生成成功地图的！
+                globalPose.x() =  std::round(globalPosef(0) /m_data_config.voxel_resolution/ SDF_BLOCK_SIZE);
+                globalPose.y() =  std::round(globalPosef(1) /m_data_config.voxel_resolution/ SDF_BLOCK_SIZE);
+                globalPose.z() =  std::round(globalPosef(2) /m_data_config.voxel_resolution/ SDF_BLOCK_SIZE);          
+
+                //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
+                int globalHashIndex = hashIndex(globalPose);
+                ITMHashEntry hashEntry = GlobalHashTable[globalHashIndex];
+
+                bool isFound =false;
+                bool isExtra =false;
+
+                if(IS_EQUAL3(hashEntry.pos, globalPose) && hashEntry.ptr >= -1)
+                {
+                    isFound =true;
+                }
+                if(!isFound)//是否在额外链表中
+                {
+                    if(hashEntry.ptr >= -1){
+
+                        while(hashEntry.offset >= 1){
+                            globalHashIndex = SDF_BUCKET_NUM + hashEntry.offset - 1;
+                            hashEntry = GlobalHashTable[globalHashIndex];
+                            if(IS_EQUAL3(hashEntry.pos, globalPose))
+                            {
+                                isFound = true;
+                                break;
+                            }
+                        }
+                        isExtra =true;//用来表示是否是在额外列表区域没找到
+                    }
+                }
+
+                if(isFound)//找到了,且对应的索引为hashIdx
+                {
+                    std::cout<<"found !!!"<<std::endl;
+                    //根据索引取体素，然后融合global和submap
                     ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
                     ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
                     for (int z = 0; z < SDF_BLOCK_SIZE; z++){
@@ -491,21 +925,207 @@ namespace DWIO {
                                 compute(submap_voxel[locId],global_voxel[locId],128);
                             }
                         }
+                    }           
+
+                }
+                else{//没找到
+                    //std::cout<<"no found !!!"<<std::endl;
+                    if(isExtra)//hash条目要创建在额外列表的地方
+                    {
+                        ITMHashEntry hashEntry_temp{};
+                        hashEntry_temp.pos.x = globalPose.x();
+                        hashEntry_temp.pos.y = globalPose.y();
+                        hashEntry_temp.pos.z = globalPose.z();
+                        hashEntry_temp.ptr = -1;
+
+                        int exlOffset = GlobalMap.GetExtraListPos();
+                        if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
+                            continue;
+                        
+                        GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
+                        GlobalHashTable[SDF_BUCKET_NUM + exlOffset] = hashEntry_temp; 
+                        globalHashIndex = SDF_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
+                        //std::cout<<"generate a hashEntry"<<std::endl;
+                    }
+                    else{
+                        //顺序部分插入
+                        ITMHashEntry hashEntry_temp{};
+                        hashEntry_temp.pos.x = globalPose.x();
+                        hashEntry_temp.pos.y = globalPose.y();
+                        hashEntry_temp.pos.z = globalPose.z();
+                        hashEntry_temp.ptr = -1;
+                        hashEntry_temp.offset = 0;
+
+                        GlobalHashTable[globalHashIndex] = hashEntry_temp;
+                        //std::cout<<"generate a hashEntry"<<std::endl;
+                    }
+                    //std::cout<<"generate voxel"<<std::endl;
+                    ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                    ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                    for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                        for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                            for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                            
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[locId],128);
+                            }
+                        }
                     } 
+                }
+
+
+            }
+            //检查全局地图
+            CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+            ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+            meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+            mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
+        }
+
+    }
+
+    void Pipeline::SaveGlobalMapByVoxel2(std::map<uint32_t,DWIO::submap>&submaps_)
+    {
+        //生成一个全局地图，并开辟新的hash函数
+        DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
+        ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
+        ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;
+        int nums =0;
+
+        for( auto& it : submaps_)//遍历每个子图
+        {
+            auto& submap = it.second;
+
+            //只保存一张子图看看效果
+            if(submap.submap_id >1)
+            {
+                std::cout<<"only fusion "<<nums<<" submap"<<std::endl;
+                break;
+            }
+            nums++;
+            const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);//得到子图的hash表
+            CheckGlobalMap(hashEntries,submap.noTotalEntries);
+            //应该再封装一个子函数去实现!
+            for(int i=0;i<submap.noTotalEntries;i++)//遍历子图的hash表
+            {
+                if(hashEntries[i].ptr<-1) continue;
+                for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+                    for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+                        for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+                            Vector3i submapPos;
+                            //体素坐标
+                            submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
+                            submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
+                            submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
+                            Vector4f submapPosf;//该block中每个小体素的世界坐标  ,这里也要变        
+                            submapPosf(0) = (float)(submapPos.x() + x + 0.5) * m_data_config.voxel_resolution;
+                            submapPosf(1) = (float)(submapPos.y() + y + 0.5) * m_data_config.voxel_resolution; 
+                            submapPosf(2) = (float)(submapPos.z() + z + 0.5) * m_data_config.voxel_resolution;  
+                            submapPosf(3) = 1.0;
+                            Vector4f globalPosef;
+                            Vector3i globalPose;//在全局坐标系下的block坐标
+                            Vector3s globalBlockPose;
+                            globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
+                            globalPose.x() =  std::round(globalPosef(0) / m_data_config.voxel_resolution);
+                            globalPose.y() =  std::round(globalPosef(1) / m_data_config.voxel_resolution);
+                            globalPose.z() =  std::round(globalPosef(2) / m_data_config.voxel_resolution);   
+                            int global_linearIdx = pointToVoxelBlockPosCpu(globalPose, globalBlockPose);
+                            //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
+                            int globalHashIndex = hashIndexCPU(globalBlockPose);
+                            ITMHashEntry hashEntry = GlobalHashTable[globalHashIndex];
+                            bool isFound =false;
+                            bool isExtra =false;
+
+                            if(IS_EQUAL3(hashEntry.pos, globalBlockPose) && hashEntry.ptr >= -1)
+                            {
+                                isFound =true;
+                            }
+                            if(!isFound)//是否在额外链表中
+                            {
+                                if(hashEntry.ptr >= -1){
+
+                                    while(hashEntry.offset >= 1){
+                                        globalHashIndex = SDF_BUCKET_NUM + hashEntry.offset - 1;
+                                        hashEntry = GlobalHashTable[globalHashIndex];
+                                        if(IS_EQUAL3(hashEntry.pos, globalBlockPose))
+                                        {
+                                            isFound = true;
+                                            break;
+                                        }
+                                    }
+                                    isExtra =true;//用来表示是否是在额外列表区域没找到
+                                }
+                            }
+                            if(isFound)//找到了,且对应的索引为hashIdx
+                            {
+
+                                //根据索引取体素，然后融合global和submap
+                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
+                                            
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
+
+                            }
+                            else{//没找到
+                                //创建hash条目，这里还涉及到额外链表的分配啊
+                                if(isExtra)//hash条目要创建在额外列表的地方
+                                {
+                                    ITMHashEntry hashEntry_temp{};
+                                    hashEntry_temp.pos.x = globalBlockPose.x();
+                                    hashEntry_temp.pos.y = globalBlockPose.y();
+                                    hashEntry_temp.pos.z = globalBlockPose.z();
+                                    hashEntry_temp.ptr = -1;
+
+                                    int exlOffset = GlobalMap.GetExtraListPos();
+                                    if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
+                                        continue;
+                                    
+                                    GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
+                                    GlobalHashTable[SDF_BUCKET_NUM + exlOffset] = hashEntry_temp; 
+                                    globalHashIndex = SDF_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
+                                    //std::cout<<"generate a hashEntry"<<std::endl;
+                                }
+                                else{
+                                    //顺序部分插入
+                                    ITMHashEntry hashEntry_temp{};
+                                    hashEntry_temp.pos.x = globalBlockPose.x();
+                                    hashEntry_temp.pos.y = globalBlockPose.y();
+                                    hashEntry_temp.pos.z = globalBlockPose.z();
+                                    hashEntry_temp.ptr = -1;
+                                    hashEntry_temp.offset = 0;
+
+                                    GlobalHashTable[globalHashIndex] = hashEntry_temp;
+                                    //std::cout<<"generate a hashEntry"<<std::endl;
+                                }
+                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
+                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);                 
+                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
+                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
+
+
+                            }
+                        }
+                    }
                 }
                 
             }
         }
-
         //检查全局地图
         CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+
+        //在这里生成地图！
+        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
+        std::cout<<"save map successfully!"<<std::endl;         
     }
 
     void Pipeline::FuseSubmaps(ITMHashEntry* GlobalHashTable,ITMVoxel_d* GlobalVoxelData,DWIO::Submap& submap)
     {
 
     }
-    void Pipeline::CheckGlobalMap(ITMHashEntry* GlobalHashTable,int total)
+    void Pipeline::CheckGlobalMap(const ITMHashEntry* GlobalHashTable,int total)
     {
         int nums =0;
         for(int i = 0; i < total; i++)

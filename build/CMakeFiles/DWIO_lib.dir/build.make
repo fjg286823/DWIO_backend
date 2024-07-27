@@ -85,6 +85,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: 
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMMeshingEngine_CUDA.cu.o: /usr/include/GL/glu.h
@@ -871,6 +872,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSceneReconstructionEngine_CUDA.cu.o: /usr/include/GL/glu.h
@@ -1657,6 +1659,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o:
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_ITMSwappingEngine_CUDA.cu.o: /usr/include/GL/glu.h
@@ -2437,6 +2440,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /home/fjg/test/DWI
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_csm.cu.o: /usr/include/GL/glu.h
@@ -3220,6 +3224,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /ho
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_extract_pointcloud.cu.o: /usr/include/GL/glu.h
@@ -4000,6 +4005,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /home/fjg
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_gauss_newton.cu.o: /usr/include/GL/glu.h
@@ -6334,6 +6340,7 @@ CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_sha
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /home/fjg/test/DWIO_hash/src/hash/ITMVoxelTypes.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryBlock.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /home/fjg/test/DWIO_hash/src/hash/MemoryDeviceType.h
+CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /home/fjg/test/DWIO_hash/src/hash/Submap.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /usr/include/GL/gl.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /usr/include/GL/glew.h
 CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_surface_prediction_phong_shading.cu.o: /usr/include/GL/glu.h
