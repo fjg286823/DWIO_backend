@@ -14,7 +14,7 @@ namespace DWIO
 	public:
 		void MeshScene(ITMMesh *mesh, ITMScene<TVoxel, ITMVoxelBlockHash> *scene);
 		void MeshScene(ITMMesh *mesh, TVoxel* globalVBA , ITMHashEntry* hashTable,int noTotalEntries,float factor);
-		void MeshScene(ITMMesh *mesh, std::map<int,DWIO::BlockData>& blocks , ITMHashEntry* hashTable,int noTotalEntries,float factor);
+		void MeshScene(ITMMesh *mesh, std::map<int,DWIO::BlockData*>& blocks , ITMHashEntry* hashTable,int noTotalEntries,float factor,Eigen::Matrix4f Trans);
 		void MeshScene_global(ITMMesh *mesh, TVoxel* globalVBA , ITMHashEntry* hashTable,int noTotalEntries,float factor);
 
 		ITMMeshingEngine_CPU(void) { }

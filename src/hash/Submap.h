@@ -12,19 +12,18 @@ namespace DWIO
     struct BlockData{
         BlockData(){
             voxel_data =  (ITMVoxel_d *) malloc(sizeof(ITMVoxel_d) * SDF_BLOCK_SIZE3);
-            std::fill(voxel_data, voxel_data + SDF_BLOCK_SIZE3, ITMVoxel_d());
             block_pos.x() = 32765;
             block_pos.y() = 32765;
             block_pos.z() = 32765;
         }
-        // ~BlockData(){
-        //     free(voxel_data);
-        // }
+        ~BlockData(){
+            free(voxel_data);
+        }
 
         ITMVoxel_d* voxel_data;
         Vector3s block_pos;
     };
-    //现在已经用一个宏一键修改了
+
 
     /*这种子图的方式更加节省体素占用的cpu内存空间，且使用的都是一个hash函数，不会有潜在的风险（由于不同hash函数带来计算的索引不一致导致的）
     */
@@ -33,7 +32,7 @@ namespace DWIO
         u_int32_t submap_id;
         int noTotalEntries;
         Eigen::Matrix4d submap_pose;
-        std::map<int,BlockData> blocks_;
+        std::map<int,BlockData*> blocks_;
         DWIO::MemoryBlock<ITMHashEntry> *hashEntries_submap;
         submap()
         {
@@ -41,12 +40,12 @@ namespace DWIO
             noTotalEntries =0;
             submap_pose.setIdentity();
         }
-        // ~submap()
-        // {
-        //     hashEntries_submap->Free();
-        //     delete hashEntries_submap;
-        //     blocks_.clear();
-        // }
+        ~submap()
+        {
+            hashEntries_submap->Free();
+            delete hashEntries_submap;
+            blocks_.clear();
+        }
         submap(Eigen::Matrix4d pose_,u_int32_t id_,int bucket_nums,int extra_nums)
         {
             submap_id = id_;
@@ -66,11 +65,11 @@ namespace DWIO
             {
                 if(submap_hashTable[i].ptr<-1) continue;
 
-                BlockData block_data;
-                block_data.block_pos.x() = submap_hashTable[i].pos.x;
-                block_data.block_pos.y() = submap_hashTable[i].pos.y;
-                block_data.block_pos.z() = submap_hashTable[i].pos.z;
-                memcpy(block_data.voxel_data,voxel_datas + i*SDF_BLOCK_SIZE3,sizeof(ITMVoxel_d)*SDF_BLOCK_SIZE3);
+                BlockData* block_data = new BlockData();
+                block_data->block_pos.x() = submap_hashTable[i].pos.x;
+                block_data->block_pos.y() = submap_hashTable[i].pos.y;
+                block_data->block_pos.z() = submap_hashTable[i].pos.z;
+                memcpy(block_data->voxel_data, voxel_datas + i*SDF_BLOCK_SIZE3,sizeof(ITMVoxel_d)*SDF_BLOCK_SIZE3);
                 blocks_[i] = block_data;
             }
             std::cout<<"generate :"<<blocks_.size()<<" blocks data"<<std::endl;
@@ -78,7 +77,7 @@ namespace DWIO
 
         ITMVoxel_d* GetVoxel(int index)
         {
-            ITMVoxel_d* res = blocks_[index].voxel_data;
+            ITMVoxel_d* res = blocks_[index]->voxel_data;
             return res;
         }
     };

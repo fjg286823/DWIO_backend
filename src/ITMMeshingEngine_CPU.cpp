@@ -69,8 +69,8 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, ITMScene<TVoxel, ITM
 }
 
 template<class TVoxel>//for submap
-void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, std::map<int,DWIO::BlockData>& blocks , ITMHashEntry* hashTable,
-		int noTotalEntries,float factor)
+void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, std::map<int,DWIO::BlockData*>& blocks , ITMHashEntry* hashTable,
+		int noTotalEntries,float factor,Eigen::Matrix4f Trans)
 {
 	ITMMesh::Triangle *triangles = mesh->triangles->GetData(MEMORYDEVICE_CPU);
 
@@ -101,6 +101,10 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, std::map<int,DWIO::B
 						triangles[noTriangles].p0 = vertList[triangleTable[cubeIndex][i]] ;
 						triangles[noTriangles].p1 = vertList[triangleTable[cubeIndex][i + 1]];
 						triangles[noTriangles].p2 = vertList[triangleTable[cubeIndex][i + 2]];
+						transformPoint(triangles[noTriangles].p0,Trans);
+						transformPoint(triangles[noTriangles].p1,Trans);
+						transformPoint(triangles[noTriangles].p2,Trans);
+
 
 						if (noTriangles < noMaxTriangles - 1) noTriangles++;
 					}

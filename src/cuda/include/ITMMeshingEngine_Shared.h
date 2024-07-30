@@ -390,7 +390,7 @@ __device__ inline bool findPointNeighborsCpu(Vector3f *p, float *tsdf, Vector3i 
 
 //看这个点周围是否有点，如果周围8个点有一个没点就返回false
 inline bool findPointNeighbors_new_submap(Vector3f *p, float *tsdf, Vector3i blockLocation, 
-                            std::map<int,DWIO::BlockData>& blocks , const ITMHashEntry *hashTable) {
+                            std::map<int,DWIO::BlockData*>& blocks , const ITMHashEntry *hashTable) {
     int vmIndex;
     Vector3i localBlockLocation;
     //printf("2\n");
@@ -655,7 +655,7 @@ __device__ inline int buildVertListGlobal(Vertex *vertList, Vector3i globalPos, 
 
 
 __device__ inline int buildVertList_new_submap(Vertex *vertList, Vector3i globalPos, Vector3i localPos,  
-                        std::map<int,DWIO::BlockData>& blocks, const ITMHashEntry *hashTable, float factor) {
+                        std::map<int,DWIO::BlockData*>& blocks, const ITMHashEntry *hashTable, float factor) {
     Vector3f points[8];
     float tsdfVals[8];
     //如果当前点周围8个点有一个没在在gpu中，则返回

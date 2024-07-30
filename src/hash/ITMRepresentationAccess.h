@@ -119,7 +119,7 @@ __device__ inline TVoxel readVoxelCpu(const CONSTPTR(TVoxel) *voxelData,
     return TVoxel();
 }
 
-inline ITMVoxel_d readVoxel_new_submap_core( std::map<int,DWIO::BlockData>& blocks,
+inline ITMVoxel_d readVoxel_new_submap_core( std::map<int,DWIO::BlockData*>& blocks,
                                    const CONSTPTR(DWIO::ITMVoxelBlockHash::IndexData) *voxelIndex,
                                    const THREADPTR(Vector3i) &point,
                                    THREADPTR(int) &vmIndex) {
@@ -134,7 +134,7 @@ inline ITMVoxel_d readVoxel_new_submap_core( std::map<int,DWIO::BlockData>& bloc
 
         if (IS_EQUAL3(hashEntry.pos, blockPos) ) {
             vmIndex = hashIdx + 1; 
-            return blocks[hashIdx].voxel_data[linearIdx];
+            return blocks[hashIdx]->voxel_data[linearIdx];
         }
 
         if (hashEntry.offset < 1) break;
@@ -193,7 +193,7 @@ inline TVoxel readVoxelGlobal(const CONSTPTR(TVoxel) *voxelData,
 }
 
 
-inline ITMVoxel_d readVoxel_new_submap( std::map<int,DWIO::BlockData>& blocks,
+inline ITMVoxel_d readVoxel_new_submap( std::map<int,DWIO::BlockData*>& blocks,
                                    const CONSTPTR(DWIO::ITMVoxelBlockHash::IndexData) *voxelIndex,
                                    Vector3i point,
                                    THREADPTR(int) &vmIndex) {
