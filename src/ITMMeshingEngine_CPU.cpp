@@ -166,48 +166,30 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, TVoxel* globalVBA , 
 }
 
 template<class TVoxel>//for Globalmap
-void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, TVoxel* globalVBA , ITMHashEntry* hashTable,
-		int noTotalEntries,float factor)
+void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint32_t,DWIO::submap*>&submaps_,
+									int noTotalEntries,float factor)
 {
-	ITMMesh::Triangle *triangles = mesh->triangles->GetData(MEMORYDEVICE_CPU);
-
-	int noTriangles = 0, noMaxTriangles = mesh->noMaxTriangles;
-
-
-	mesh->triangles->Clear();
-	for (int entryId = 0; entryId < noTotalEntries; entryId++)
+	//1、遍历所有子图
+	for(auto& it : submaps_)
 	{
-		Vector3i globalPos;
-		ITMHashEntry &currentHashEntry = hashTable[entryId];//是因为hash表是gpu的吧
-		if (currentHashEntry.ptr <-1) continue;//先只生成cpu上的地图,这里出的问题
+		auto& submap = it.second;
 
-        globalPos.x() = currentHashEntry.pos.x * SDF_BLOCK_SIZE;
-        globalPos.y() = currentHashEntry.pos.y * SDF_BLOCK_SIZE;
-        globalPos.z() = currentHashEntry.pos.z * SDF_BLOCK_SIZE;
-
-		//printf("1.2\n");
-		for (int z = 0; z < SDF_BLOCK_SIZE; z++) {
-			for (int y = 0; y < SDF_BLOCK_SIZE; y++) {
-				for (int x = 0; x < SDF_BLOCK_SIZE; x++)
-				{
-					Vertex vertList[12];
-					int cubeIndex = buildVertListGlobal(vertList, globalPos, Vector3i(x, y, z), globalVBA, hashTable,factor);
-					
-					if (cubeIndex < 0) continue;
-
-					for (int i = 0; triangleTable[cubeIndex][i] != -1; i += 3)
-					{
-						triangles[noTriangles].p0 = vertList[triangleTable[cubeIndex][i]] ;
-						triangles[noTriangles].p1 = vertList[triangleTable[cubeIndex][i + 1]];
-						triangles[noTriangles].p2 = vertList[triangleTable[cubeIndex][i + 2]];
-
-						if (noTriangles < noMaxTriangles - 1) noTriangles++;
+		for(auto& block : submap->blocks_)
+		{
+			Eigen::Vector3i submap_pose = block->second->block_pos * SDF_BLOCK_SIZE;
+			//遍历block
+			for (int z = 0; z < SDF_BLOCK_SIZE; z++){
+				for (int y = 0; y < SDF_BLOCK_SIZE; y++){
+					for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
+						Vector3f vertList[12];
+						int cubeIndex = buildVertListMulti(vertList, submap_pose, Vector3i(x, y, z), /**/);
 					}
 				}
 			}
+
 		}
 	}
 
-	mesh->noTotalTriangles = noTriangles;
-	std::cout<<"get "<<noTriangles<<" triangles "<<std::endl;
+
+	//2、遍历所有子图的blocks_;
 }

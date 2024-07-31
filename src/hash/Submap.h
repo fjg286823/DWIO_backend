@@ -32,6 +32,10 @@ namespace DWIO
         u_int32_t submap_id;
         int noTotalEntries;
         Eigen::Matrix4d submap_pose;
+
+        Eigen::Matrix3d local_rotation;
+        Eigen::Vector3d local_translation;
+
         std::map<int,BlockData*> blocks_;
         DWIO::MemoryBlock<ITMHashEntry> *hashEntries_submap;
         submap()
@@ -49,7 +53,9 @@ namespace DWIO
         submap(Eigen::Matrix4d pose_,u_int32_t id_,int bucket_nums,int extra_nums)
         {
             submap_id = id_;
-            submap_pose = pose_;   
+            submap_pose = pose_;  
+            local_rotation = pose_.block(0,0,3,3); 
+            local_translation = pose_.block(0,3,3,1);
             noTotalEntries = bucket_nums + extra_nums;
             hashEntries_submap = new DWIO::MemoryBlock<ITMHashEntry>(noTotalEntries, MEMORYDEVICE_CPU);   
             ITMHashEntry tmpEntry{};

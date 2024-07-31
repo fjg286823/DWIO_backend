@@ -532,14 +532,14 @@ namespace DWIO {
             }
         }
 
-        //检查全局地图
-        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
-        //在这里生成地图！
-        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        std::cout<<"2"<<std::endl;
-        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
-        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
-        std::cout<<"save map successfully!"<<std::endl;
+        // //检查全局地图
+        // CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+        // //在这里生成地图！
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // std::cout<<"2"<<std::endl;
+        // meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");
+        // std::cout<<"save map successfully!"<<std::endl;
     }
 
     void Pipeline::SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps)
@@ -679,12 +679,12 @@ namespace DWIO {
             }
         }
         //检查全局地图
-        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
-        std::cout<<"generate map"<<std::endl;
-        //在这里生成地图！
-        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
-        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");        
+        // CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+        // std::cout<<"generate map"<<std::endl;
+        // //在这里生成地图！
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");        
     }
 
     
@@ -819,146 +819,27 @@ namespace DWIO {
             }
 
         }
-        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
-        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
-        mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
+        // CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
 
     }
 
     void Pipeline::SaveGlobalMapByVoxel2(std::map<uint32_t,DWIO::submap>&submaps_)
     {
-        //生成一个全局地图，并开辟新的hash函数
-        DWIO::Submap GlobalMap(Eigen::Matrix4d::Identity(),0,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
-        ITMHashEntry* GlobalHashTable = GlobalMap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);
-        ITMVoxel_d* GlobalVoxelData = GlobalMap.storedVoxelBlocks_submap;
-        int nums =0;
-
+   
         for( auto& it : submaps_)//遍历每个子图
         {
             auto& submap = it.second;
 
-            //只保存一张子图看看效果
-            if(submap.submap_id >1)
-            {
-                std::cout<<"only fusion "<<nums<<" submap"<<std::endl;
-                break;
-            }
-            nums++;
-            const ITMHashEntry* hashEntries = submap.hashEntries_submap->GetData(MEMORYDEVICE_CPU);//得到子图的hash表
-            CheckGlobalMap(hashEntries,submap.noTotalEntries);
-            //应该再封装一个子函数去实现!
-            for(int i=0;i<submap.noTotalEntries;i++)//遍历子图的hash表
-            {
-                if(hashEntries[i].ptr<-1) continue;
-                for (int z = 0; z < SDF_BLOCK_SIZE; z++){
-                    for (int y = 0; y < SDF_BLOCK_SIZE; y++){
-                        for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
-                            Vector3i submapPos;
-                            //体素坐标
-                            submapPos.x() = hashEntries[i].pos.x * SDF_BLOCK_SIZE;
-                            submapPos.y() = hashEntries[i].pos.y * SDF_BLOCK_SIZE;
-                            submapPos.z() = hashEntries[i].pos.z * SDF_BLOCK_SIZE;
-                            Vector4f submapPosf;//该block中每个小体素的世界坐标  ,这里也要变        
-                            submapPosf(0) = (float)(submapPos.x() + x + 0.5) * m_data_config.voxel_resolution;
-                            submapPosf(1) = (float)(submapPos.y() + y + 0.5) * m_data_config.voxel_resolution; 
-                            submapPosf(2) = (float)(submapPos.z() + z + 0.5) * m_data_config.voxel_resolution;  
-                            submapPosf(3) = 1.0;
-                            Vector4f globalPosef;
-                            Vector3i globalPose;//在全局坐标系下的block坐标
-                            Vector3s globalBlockPose;
-                            globalPosef =  submap.submap_pose.cast<float>() * submapPosf;//转成float再乘
-                            globalPose.x() =  std::round(globalPosef(0) / m_data_config.voxel_resolution);
-                            globalPose.y() =  std::round(globalPosef(1) / m_data_config.voxel_resolution);
-                            globalPose.z() =  std::round(globalPosef(2) / m_data_config.voxel_resolution);   
-                            int global_linearIdx = pointToVoxelBlockPosCpu(globalPose, globalBlockPose);
-                            //在融合过程中，不仅需要体素数据融合，还要同时创建全局hash表中对应的hash条目
-                            int globalHashIndex = hashIndexCPU(globalBlockPose);
-                            ITMHashEntry hashEntry = GlobalHashTable[globalHashIndex];
-                            bool isFound =false;
-                            bool isExtra =false;
 
-                            if(IS_EQUAL3(hashEntry.pos, globalBlockPose) && hashEntry.ptr >= -1)
-                            {
-                                isFound =true;
-                            }
-                            if(!isFound)//是否在额外链表中
-                            {
-                                if(hashEntry.ptr >= -1){
+    
 
-                                    while(hashEntry.offset >= 1){
-                                        globalHashIndex = SDF_BUCKET_NUM + hashEntry.offset - 1;
-                                        hashEntry = GlobalHashTable[globalHashIndex];
-                                        if(IS_EQUAL3(hashEntry.pos, globalBlockPose))
-                                        {
-                                            isFound = true;
-                                            break;
-                                        }
-                                    }
-                                    isExtra =true;//用来表示是否是在额外列表区域没找到
-                                }
-                            }
-                            if(isFound)//找到了,且对应的索引为hashIdx
-                            {
-
-                                //根据索引取体素，然后融合global和submap
-                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
-                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);
-                                            
-                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
-                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
-
-                            }
-                            else{//没找到
-                                //创建hash条目，这里还涉及到额外链表的分配啊
-                                if(isExtra)//hash条目要创建在额外列表的地方
-                                {
-                                    ITMHashEntry hashEntry_temp{};
-                                    hashEntry_temp.pos.x = globalBlockPose.x();
-                                    hashEntry_temp.pos.y = globalBlockPose.y();
-                                    hashEntry_temp.pos.z = globalBlockPose.z();
-                                    hashEntry_temp.ptr = -1;
-
-                                    int exlOffset = GlobalMap.GetExtraListPos();
-                                    if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
-                                        continue;
-                                    
-                                    GlobalHashTable[globalHashIndex].offset = exlOffset + 1; 
-                                    GlobalHashTable[SDF_BUCKET_NUM + exlOffset] = hashEntry_temp; 
-                                    globalHashIndex = SDF_BUCKET_NUM + exlOffset;//为了后面的融合赋值！
-                                    //std::cout<<"generate a hashEntry"<<std::endl;
-                                }
-                                else{
-                                    //顺序部分插入
-                                    ITMHashEntry hashEntry_temp{};
-                                    hashEntry_temp.pos.x = globalBlockPose.x();
-                                    hashEntry_temp.pos.y = globalBlockPose.y();
-                                    hashEntry_temp.pos.z = globalBlockPose.z();
-                                    hashEntry_temp.ptr = -1;
-                                    hashEntry_temp.offset = 0;
-
-                                    GlobalHashTable[globalHashIndex] = hashEntry_temp;
-                                    //std::cout<<"generate a hashEntry"<<std::endl;
-                                }
-                                ITMVoxel_d* submap_voxel = submap.GetVoxel(i);
-                                ITMVoxel_d* global_voxel = GlobalMap.GetVoxel(globalHashIndex);                 
-                                int locId = x + y * SDF_BLOCK_SIZE + z * SDF_BLOCK_SIZE * SDF_BLOCK_SIZE;
-                                compute(submap_voxel[locId],global_voxel[global_linearIdx],128);
-
-
-                            }
-                        }
-                    }
-                }
-                
-            }
         }
-        //检查全局地图
-        CheckGlobalMap(GlobalHashTable,GlobalMap.noTotalEntries);
 
         //在这里生成地图！
         ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        meshingEngineCpu->MeshScene_global(mesh_cpu,GlobalVoxelData,GlobalHashTable,GlobalMap.noTotalEntries,m_data_config.voxel_resolution);
         mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
         std::cout<<"save map successfully!"<<std::endl;         
     }
