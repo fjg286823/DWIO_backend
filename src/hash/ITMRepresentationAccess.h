@@ -251,7 +251,7 @@ __device__ inline int16_t readFromSDF_float_uninterpolated(const CONSTPTR(TVoxel
     return res.tsdf;
 }
 
-//从子图的8个体素插值出一个tsdf值，这个TCache要改改
+//从子图的8个体素插值出一个tsdf值
 inline float readFromSDF_voxel_interpolated(std::map<int,DWIO::BlockData*>& blocks,
 	DWIO::ITMVoxelBlockHash::IndexData* voxelIndex, Vector3f point, int& vmIndex, int& maxW)
 {
@@ -322,17 +322,17 @@ inline float readFromSDF_float_interpolated(std::map<uint32_t,DWIO::submap*>&sub
      
     for( auto& it : submaps_)
     {
-    auto& submap = it.second; 
-    //转到子图坐标系
-    Vector3f point_local =submap->local_rotation.transpose().cast<float>() *(point - submap->local_translation.cast<float>());
-    int vmIndex_tmp, maxW;
-    float sdf = readFromSDF_voxel_interpolated(submap->blocks_, submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU), 
-                        point_local, vmIndex_tmp, maxW);
-    if (!vmIndex_tmp) continue;
-    vmIndex = true;
+        auto& submap = it.second; 
+        //转到子图坐标系
+        Vector3f point_local =submap->local_rotation.transpose().cast<float>() *(point - submap->local_translation.cast<float>());
+        int vmIndex_tmp, maxW;
+        float sdf = readFromSDF_voxel_interpolated(submap->blocks_, submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU), 
+                            point_local, vmIndex_tmp, maxW);
+        if (!vmIndex_tmp) continue;
+        vmIndex = true;
 
-    sum_sdf += (float)maxW * sdf;
-    sum_weights += maxW;
+        sum_sdf += (float)maxW * sdf;
+        sum_weights += maxW;
 
     }
     if (sum_weights == 0) return 1.0f;

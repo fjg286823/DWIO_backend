@@ -826,20 +826,12 @@ namespace DWIO {
 
     }
 
-    void Pipeline::SaveGlobalMapByVoxel2(std::map<uint32_t,DWIO::submap>&submaps_)
+    void Pipeline::save_global_map(std::map<uint32_t,DWIO::submap>&submaps_)
     {
    
-        for( auto& it : submaps_)//遍历每个子图
-        {
-            auto& submap = it.second;
-
-
-    
-
-        }
-
         //在这里生成地图！
         ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        meshingEngineCpu->MeshScene_global(mesh_cpu,submaps_,m_data_config.voxel_resolution);
         mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
         std::cout<<"save map successfully!"<<std::endl;         
     }

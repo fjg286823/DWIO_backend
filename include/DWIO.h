@@ -66,7 +66,7 @@ namespace DWIO {
         void SaveGlobalMap(std::map<uint32_t,DWIO::Submap>&multi_submaps);
         void SaveGlobalMap(std::map<uint32_t,DWIO::submap*>&submaps_);
         void SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps);
-        void SaveGlobalMapByVoxel2(std::map<uint32_t,DWIO::submap>&submaps_);
+        void save_global_map(std::map<uint32_t,DWIO::submap>&submaps_);
 
         void FuseSubmaps(ITMHashEntry* GlobalHashTable,ITMVoxel_d* GlobalVoxelData,DWIO::Submap& submap);
         void CheckGlobalMap(const ITMHashEntry* GlobalHashTable,int total);

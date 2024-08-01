@@ -57,21 +57,21 @@ if(NOT generated_file)
 endif()
 
 # Set these up as variables to make reading the generated file easier
-set(CMAKE_COMMAND "/usr/local/bin/cmake") # path
-set(source_file "/home/fjg/test/DWIO_hash/src/cuda/map_segmentation.cu") # path
-set(NVCC_generated_dependency_file "/home/fjg/test/DWIO_hash/build/CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_map_segmentation.cu.o.NVCC-depend") # path
-set(cmake_dependency_file "/home/fjg/test/DWIO_hash/build/CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_map_segmentation.cu.o.depend") # path
-set(CUDA_make2cmake "/usr/local/share/cmake-3.25/Modules/FindCUDA/make2cmake.cmake") # path
-set(CUDA_parse_cubin "/usr/local/share/cmake-3.25/Modules/FindCUDA/parse_cubin.cmake") # path
+set(CMAKE_COMMAND "/usr/bin/cmake") # path
+set(source_file "/home/dm/work/DWIO/DWIO_backend/src/cuda/map_segmentation.cu") # path
+set(NVCC_generated_dependency_file "/home/dm/work/DWIO/DWIO_backend/build/CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_map_segmentation.cu.o.NVCC-depend") # path
+set(cmake_dependency_file "/home/dm/work/DWIO/DWIO_backend/build/CMakeFiles/DWIO_lib.dir/src/cuda/DWIO_lib_generated_map_segmentation.cu.o.depend") # path
+set(CUDA_make2cmake "/usr/share/cmake-3.16/Modules/FindCUDA/make2cmake.cmake") # path
+set(CUDA_parse_cubin "/usr/share/cmake-3.16/Modules/FindCUDA/parse_cubin.cmake") # path
 set(build_cubin OFF) # bool
 set(CUDA_HOST_COMPILER "/usr/bin/cc") # path
 # We won't actually use these variables for now, but we need to set this, in
 # order to force this file to be run again if it changes.
-set(generated_file_path "/home/fjg/test/DWIO_hash/build/CMakeFiles/DWIO_lib.dir/src/cuda/.") # path
-set(generated_file_internal "/home/fjg/test/DWIO_hash/build/CMakeFiles/DWIO_lib.dir/src/cuda/./DWIO_lib_generated_map_segmentation.cu.o") # path
-set(generated_cubin_file_internal "/home/fjg/test/DWIO_hash/build/CMakeFiles/DWIO_lib.dir/src/cuda/./DWIO_lib_generated_map_segmentation.cu.o.cubin.txt") # path
+set(generated_file_path "/home/dm/work/DWIO/DWIO_backend/build/CMakeFiles/DWIO_lib.dir/src/cuda/.") # path
+set(generated_file_internal "/home/dm/work/DWIO/DWIO_backend/build/CMakeFiles/DWIO_lib.dir/src/cuda/./DWIO_lib_generated_map_segmentation.cu.o") # path
+set(generated_cubin_file_internal "/home/dm/work/DWIO/DWIO_backend/build/CMakeFiles/DWIO_lib.dir/src/cuda/./DWIO_lib_generated_map_segmentation.cu.o.cubin.txt") # path
 
-set(CUDA_NVCC_EXECUTABLE "/usr/local/cuda-11.4/bin/nvcc") # path
+set(CUDA_NVCC_EXECUTABLE "/home/dm/anaconda3/bin/nvcc") # path
 set(CUDA_NVCC_FLAGS -O3;-std=c++14;-gencode;arch=compute_86,code=sm_86 ;; ) # list
 # Build specific configuration flags
 set(CUDA_NVCC_FLAGS_DEBUG  ; )
@@ -79,7 +79,7 @@ set(CUDA_NVCC_FLAGS_MINSIZEREL  ; )
 set(CUDA_NVCC_FLAGS_RELEASE  ; )
 set(CUDA_NVCC_FLAGS_RELWITHDEBINFO  ; )
 set(nvcc_flags -m64) # list
-set(CUDA_NVCC_INCLUDE_DIRS [==[/usr/local/cuda-11.4/include;/usr/local/include/eigen3;/usr/include/vtk-7.1;/usr/include/freetype2;/usr/include;/usr/include/x86_64-linux-gnu;/usr/include;/usr/include;/usr/include;/usr/include;/usr/include;/usr/include/pcl-1.10;/usr/local/include/eigen3;/usr/include;/usr/include/vtk-7.1;/usr/include/freetype2;/usr/include/x86_64-linux-gnu;/usr/include/ni;/usr/include/openni2;/usr/local/cuda-11.4/include;/usr/local/include/opencv4;/home/fjg/test/DWIO_hash/include;/home/fjg/test/DWIO_hash/src/cuda/include;/home/fjg/test/DWIO_hash/src/hash]==]) # list (needs to be in lua quotes to address backslashes)
+set(CUDA_NVCC_INCLUDE_DIRS [==[/home/dm/anaconda3/include;/usr/local/include/eigen3;/usr/include/vtk-7.1;/usr/include/freetype2;/usr/include;/usr/include/x86_64-linux-gnu;/usr/include;/usr/include;/usr/include;/usr/include;/usr/include;/usr/include/pcl-1.10;/usr/include/eigen3;/usr/include;/usr/include/vtk-7.1;/usr/include/freetype2;/usr/include/x86_64-linux-gnu;/usr/include/ni;/usr/include/openni2;/home/dm/anaconda3/include;/usr/local/include/opencv4;/home/dm/work/DWIO/DWIO_backend/include;/home/dm/work/DWIO/DWIO_backend/src/cuda/include;/home/dm/work/DWIO/DWIO_backend/src/hash]==]) # list (needs to be in lua quotes to address backslashes)
 string(REPLACE "\\" "/" CUDA_NVCC_INCLUDE_DIRS "${CUDA_NVCC_INCLUDE_DIRS}")
 set(CUDA_NVCC_COMPILE_DEFINITIONS [==[vtkRenderingContext2D_AUTOINIT=1(vtkRenderingContextOpenGL2);vtkRenderingCore_AUTOINIT=3(vtkInteractionStyle,vtkRenderingFreeType,vtkRenderingOpenGL2);qh_QHpointer]==]) # list (needs to be in lua quotes see #16510 ).
 set(format_flag "-c") # string
@@ -159,7 +159,7 @@ macro(cuda_execute_process status command)
     # copy and paste a runnable command line.
     set(cuda_execute_process_string)
     foreach(arg ${ARGN})
-      # If there are quotes, escape them, so they come through.
+      # If there are quotes, excape them, so they come through.
       string(REPLACE "\"" "\\\"" arg ${arg})
       # Args with spaces need quotes around them to get them to be parsed as a single argument.
       if(arg MATCHES " ")
@@ -178,13 +178,13 @@ endmacro()
 # Delete the target file
 cuda_execute_process(
   "Removing ${generated_file}"
-  COMMAND "${CMAKE_COMMAND}" -E rm -f "${generated_file}"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
   )
 
 # For CUDA 2.3 and below, -G -M doesn't work, so remove the -G flag
 # for dependency generation and hope for the best.
 set(depends_CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}")
-set(CUDA_VERSION 11.4)
+set(CUDA_VERSION 11.6)
 if(CUDA_VERSION VERSION_LESS "3.0")
   # Note that this will remove all occurrences of -G.
   list(REMOVE_ITEM depends_CUDA_NVCC_FLAGS "-G")
@@ -245,7 +245,7 @@ endif()
 # Delete the temporary file
 cuda_execute_process(
   "Removing ${cmake_dependency_file}.tmp and ${NVCC_generated_dependency_file}"
-  COMMAND "${CMAKE_COMMAND}" -E rm -f "${cmake_dependency_file}.tmp" "${NVCC_generated_dependency_file}"
+  COMMAND "${CMAKE_COMMAND}" -E remove "${cmake_dependency_file}.tmp" "${NVCC_generated_dependency_file}"
   )
 
 if(CUDA_result)
@@ -271,7 +271,7 @@ if(CUDA_result)
   # Since nvcc can sometimes leave half done files make sure that we delete the output file.
   cuda_execute_process(
     "Removing ${generated_file}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${generated_file}"
+    COMMAND "${CMAKE_COMMAND}" -E remove "${generated_file}"
     )
   message(FATAL_ERROR "Error generating file ${generated_file}")
 else()

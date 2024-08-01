@@ -445,7 +445,7 @@ inline bool findPointNeighborsMulti( Vector3f* p, float *sdf, Vector3i blockLoca
     localBlockLocation.y() = (float)blockLocation.y();
     localBlockLocation.z() = (float)blockLocation.z();
 
-	localBlockLocation = blockLocation + Vector3f(0.0, 0.0, 0.0);
+	localBlockLocation = blockLocation + Vector3f(0.0, 0.0, 0.0);//转到世界坐标系下
 	p[0] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[0] = readFromSDF_float_interpolated(submaps_, p[0], vmIndex);
 	if (!vmIndex || sdf[0] == 1.0f) return false;
@@ -458,32 +458,32 @@ inline bool findPointNeighborsMulti( Vector3f* p, float *sdf, Vector3i blockLoca
 
 	localBlockLocation = blockLocation + Vector3f(1.0, 1.0, 0.0);
 	p[2] =submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
-	sdf[2] = readFromSDF_float_interpolated(localVBA, hashTables, p[2], vmIndex, cache);
+	sdf[2] = readFromSDF_float_interpolated(submaps_, p[2], vmIndex);
 	if (!vmIndex || sdf[2] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3i(0, 1, 0);
-	p[3] = hashTables->posesInv[hashTableIdx] * localBlockLocation.toFloat();
-	sdf[3] = readFromSDF_float_interpolated(localVBA, hashTables, p[3], vmIndex, cache);
+	localBlockLocation = blockLocation + Vector3f(0.0, 1.0, 0.0);
+	p[3] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
+	sdf[3] = readFromSDF_float_interpolated(submaps_, p[3], vmIndex);
 	if (!vmIndex || sdf[3] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3i(0, 0, 1);
-	p[4] = hashTables->posesInv[hashTableIdx] * localBlockLocation.toFloat();
-	sdf[4] = readFromSDF_float_interpolated(localVBA, hashTables, p[4], vmIndex, cache);
+	localBlockLocation = blockLocation + Vector3f(0.0, 0.0, 1.0);
+	p[4] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
+	sdf[4] = readFromSDF_float_interpolated(submaps_, p[4], vmIndex);
 	if (!vmIndex || sdf[4] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3i(1, 0, 1);
-	p[5] = hashTables->posesInv[hashTableIdx] * localBlockLocation.toFloat();
-	sdf[5] = readFromSDF_float_interpolated(localVBA, hashTables, p[5], vmIndex, cache);
+	localBlockLocation = blockLocation + Vector3f(1.0, 0.0, 1.0);
+	p[5] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
+	sdf[5] = readFromSDF_float_interpolated(submaps_, p[5], vmIndex);
 	if (!vmIndex || sdf[5] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3i(1, 1, 1);
-	p[6] = hashTables->posesInv[hashTableIdx] * localBlockLocation.toFloat();
-	sdf[6] = readFromSDF_float_interpolated(localVBA, hashTables, p[6], vmIndex, cache);
+	localBlockLocation = blockLocation + Vector3f(1.0, 1.0, 1.0);
+	p[6] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
+	sdf[6] = readFromSDF_float_interpolated(submaps_, p[6], vmIndex);
 	if (!vmIndex || sdf[6] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3i(0, 1, 1);
-	p[7] = hashTables->posesInv[hashTableIdx] * localBlockLocation.toFloat();
-	sdf[7] = readFromSDF_float_interpolated(localVBA, hashTables, p[7], vmIndex, cache);
+	localBlockLocation = blockLocation + Vector3f(0.0, 1.0, 1.0);
+	p[7] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
+	sdf[7] = readFromSDF_float_interpolated(submaps_s, p[7], vmIndex);
 	if (!vmIndex || sdf[7] == 1.0f) return false;
 
 	return true;
@@ -708,11 +708,10 @@ __device__ inline int buildVertListGlobal(Vertex *vertList, Vector3i globalPos, 
 
 
 __device__ inline int buildVertList_new_submap(Vertex *vertList, Vector3i globalPos, Vector3i localPos,  
-                        std::map<int,DWIO::BlockData*>& blocks, const ITMHashEntry *hashTable, float factor) {
+                        std::map<uint32_t,DWIO::submap*>&submaps_ ,uint32_t submap_index, float factor) {
     Vector3f points[8];
     float tsdfVals[8];
-    //如果当前点周围8个点有一个没在在gpu中，则返回
-    //if (!findPointNeighbors(points, tsdfVals, globalPos + localPos, localVBA, hashTable)) return -1;
+    
     if (!findPointNeighbors_new_submap(points, tsdfVals, globalPos + localPos, blocks, hashTable)) return -1;
 
     int vmIndex;
@@ -753,16 +752,15 @@ __device__ inline int buildVertList_new_submap(Vertex *vertList, Vector3i global
 
 
 __device__ inline int buildVertListMulti(Vertex *vertList, Vector3i globalPos, Vector3i localPos,  
-                        std::map<int,DWIO::BlockData*>& blocks, const ITMHashEntry *hashTable, float factor) {
+                        std::map<uint32_t,DWIO::submap*>&submaps_,u_int32_t submap_index,float factor) {
     Vector3f points[8];
     float tsdfVals[8];
-    //如果当前点周围8个点有一个没在在gpu中，则返回
-    //if (!findPointNeighbors(points, tsdfVals, globalPos + localPos, localVBA, hashTable)) return -1;
-    if (!findPointNeighbors_new_submap(points, tsdfVals, globalPos + localPos, blocks, hashTable)) return -1;
+
+    if (!findPointNeighborsMulti(points, tsdfVals, globalPos + localPos, submaps_, submap_index)) return -1;
 
     int vmIndex;
 
-    ITMVoxel_d v = readVoxel_new_submap(blocks, hashTable, globalPos + localPos, vmIndex);
+    ITMVoxel_d v = readVoxel_new_submap(submaps_[submap_index]->blocks_, globalPos + localPos, vmIndex);
     float3 color;
     color.x = static_cast<float>(v.clr.x);
     color.y = static_cast<float>(v.clr.y);

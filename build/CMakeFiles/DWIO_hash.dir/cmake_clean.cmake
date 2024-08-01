@@ -1,6 +1,5 @@
 file(REMOVE_RECURSE
   "CMakeFiles/DWIO_hash.dir/src/main.cpp.o"
-  "CMakeFiles/DWIO_hash.dir/src/main.cpp.o.d"
   "DWIO_hash"
   "DWIO_hash.pdb"
 )

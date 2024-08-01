@@ -166,9 +166,11 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, TVoxel* globalVBA , 
 }
 
 template<class TVoxel>//for Globalmap
-void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint32_t,DWIO::submap*>&submaps_,
-									int noTotalEntries,float factor)
+void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint32_t,DWIO::submap*>&submaps_,float factor)
 {
+	ITMMesh::Triangle *triangles = mesh->triangles->GetData(MEMORYDEVICE_CPU);
+
+	int noTriangles = 0, noMaxTriangles = mesh->noMaxTriangles;
 	//1、遍历所有子图
 	for(auto& it : submaps_)
 	{
@@ -182,7 +184,17 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint
 				for (int y = 0; y < SDF_BLOCK_SIZE; y++){
 					for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
 						Vector3f vertList[12];
-						int cubeIndex = buildVertListMulti(vertList, submap_pose, Vector3i(x, y, z), /**/);
+						int cubeIndex = buildVertListMulti(vertList, submap_pose, Vector3i(x, y, z),submaps_,it.first,factor);
+						if (cubeIndex < 0) continue;
+
+						for (int i = 0; triangleTable[cubeIndex][i] != -1; i += 3)
+						{
+							triangles[noTriangles].p0 = vertList[triangleTable[cubeIndex][i]] ;
+							triangles[noTriangles].p1 = vertList[triangleTable[cubeIndex][i + 1]];
+							triangles[noTriangles].p2 = vertList[triangleTable[cubeIndex][i + 2]];
+
+							if (noTriangles < noMaxTriangles - 1) noTriangles++;
+						}
 					}
 				}
 			}
