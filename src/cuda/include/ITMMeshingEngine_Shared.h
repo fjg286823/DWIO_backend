@@ -440,50 +440,52 @@ inline bool findPointNeighbors_new_submap(Vector3f *p, float *tsdf, Vector3i blo
 //                                                               一个局部子图内的体素的坐标
 inline bool findPointNeighborsMulti( Vector3f* p, float *sdf, Vector3i blockLocation,std::map<uint32_t,DWIO::submap*>&submaps_ ,uint32_t submap_index)
 {
-	int vmIndex; Vector3f localBlockLocation;
-    localBlockLocation.x() = (float)blockLocation.x();
-    localBlockLocation.y() = (float)blockLocation.y();
-    localBlockLocation.z() = (float)blockLocation.z();
+	int vmIndex; 
+    Vector3f localBlockLocation;
+    Vector3f blockLocation_f;
+    blockLocation_f.x() = (float)blockLocation.x();
+    blockLocation_f.y() = (float)blockLocation.y();
+    blockLocation_f.z() = (float)blockLocation.z();
 
-	localBlockLocation = blockLocation + Vector3f(0.0, 0.0, 0.0);//转到世界坐标系下
+	localBlockLocation = blockLocation_f + Vector3f(0.0f, 0.0f, 0.0f);//转到世界坐标系下
 	p[0] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[0] = readFromSDF_float_interpolated(submaps_, p[0], vmIndex);
 	if (!vmIndex || sdf[0] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(1.0, 0.0, 0.0);
+	localBlockLocation = blockLocation_f + Vector3f(1.0f, 0.0f, 0.0f);
 	p[1] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[1] = readFromSDF_float_interpolated(submaps_, p[1], vmIndex);
 	if (!vmIndex || sdf[1] == 1.0f) return false;
 
 
-	localBlockLocation = blockLocation + Vector3f(1.0, 1.0, 0.0);
+	localBlockLocation = blockLocation_f + Vector3f(1.0, 1.0, 0.0);
 	p[2] =submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[2] = readFromSDF_float_interpolated(submaps_, p[2], vmIndex);
 	if (!vmIndex || sdf[2] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(0.0, 1.0, 0.0);
+	localBlockLocation = blockLocation_f + Vector3f(0.0, 1.0, 0.0);
 	p[3] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[3] = readFromSDF_float_interpolated(submaps_, p[3], vmIndex);
 	if (!vmIndex || sdf[3] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(0.0, 0.0, 1.0);
+	localBlockLocation = blockLocation_f + Vector3f(0.0, 0.0, 1.0);
 	p[4] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[4] = readFromSDF_float_interpolated(submaps_, p[4], vmIndex);
 	if (!vmIndex || sdf[4] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(1.0, 0.0, 1.0);
+	localBlockLocation = blockLocation_f + Vector3f(1.0, 0.0, 1.0);
 	p[5] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[5] = readFromSDF_float_interpolated(submaps_, p[5], vmIndex);
 	if (!vmIndex || sdf[5] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(1.0, 1.0, 1.0);
+	localBlockLocation = blockLocation_f + Vector3f(1.0, 1.0, 1.0);
 	p[6] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
 	sdf[6] = readFromSDF_float_interpolated(submaps_, p[6], vmIndex);
 	if (!vmIndex || sdf[6] == 1.0f) return false;
 
-	localBlockLocation = blockLocation + Vector3f(0.0, 1.0, 1.0);
+	localBlockLocation = blockLocation_f + Vector3f(0.0, 1.0, 1.0);
 	p[7] = submaps_[submap_index]->local_rotation.cast<float>() * localBlockLocation + submaps_[submap_index]->local_translation.cast<float>();
-	sdf[7] = readFromSDF_float_interpolated(submaps_s, p[7], vmIndex);
+	sdf[7] = readFromSDF_float_interpolated(submaps_, p[7], vmIndex);
 	if (!vmIndex || sdf[7] == 1.0f) return false;
 
 	return true;
@@ -708,7 +710,7 @@ __device__ inline int buildVertListGlobal(Vertex *vertList, Vector3i globalPos, 
 
 
 __device__ inline int buildVertList_new_submap(Vertex *vertList, Vector3i globalPos, Vector3i localPos,  
-                        std::map<uint32_t,DWIO::submap*>&submaps_ ,uint32_t submap_index, float factor) {
+                         std::map<int,DWIO::BlockData*>& blocks , const ITMHashEntry *hashTable, float factor) {
     Vector3f points[8];
     float tsdfVals[8];
     
@@ -755,12 +757,13 @@ __device__ inline int buildVertListMulti(Vertex *vertList, Vector3i globalPos, V
                         std::map<uint32_t,DWIO::submap*>&submaps_,u_int32_t submap_index,float factor) {
     Vector3f points[8];
     float tsdfVals[8];
-
+    //std::cout<<"find neighbors"<<std::endl;
     if (!findPointNeighborsMulti(points, tsdfVals, globalPos + localPos, submaps_, submap_index)) return -1;
 
     int vmIndex;
 
-    ITMVoxel_d v = readVoxel_new_submap(submaps_[submap_index]->blocks_, globalPos + localPos, vmIndex);
+    ITMVoxel_d v = readVoxel_new_submap(submaps_[submap_index]->blocks_, submaps_[submap_index]->hashEntries_submap->GetData(MEMORYDEVICE_CPU),
+                                        globalPos + localPos, vmIndex);
     float3 color;
     color.x = static_cast<float>(v.clr.x);
     color.y = static_cast<float>(v.clr.y);

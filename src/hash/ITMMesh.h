@@ -30,7 +30,7 @@ namespace DWIO
 #ifdef SUBMAP
 		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 32 * 16;//* 32 * 16
 #else
-		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 12;
+		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 24;
 #endif
 		uint noMaxTriangles;
 

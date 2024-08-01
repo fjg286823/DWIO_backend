@@ -25,7 +25,7 @@ namespace DWIO {
         renderState_vh = new ITMRenderState_VH(scene->index.noTotalEntries, MEMORYDEVICE_CUDA);
         meshingEngine = new ITMMeshingEngine_CUDA<ITMVoxel_d>();
         meshingEngineCpu = new ITMMeshingEngine_CPU<ITMVoxel_d>();
-        mesh = new ITMMesh(MEMORYDEVICE_CUDA);
+        //mesh = new ITMMesh(MEMORYDEVICE_CUDA);
     }
 
     std::vector<TimestampedPose> Pipeline::PoseInterpolation(const Eigen::Vector3d &pose_2d_last,
@@ -133,8 +133,6 @@ namespace DWIO {
         }
         keyframe.camera_pose = scene->initial_pose * m_pose;
         GlobalPose = keyframe.camera_pose;
-        // std::cout<<"global pose :"<<std::endl;
-        // std::cout<<GlobalPose<<std::endl;
 
         m_keyframe_buffer.push_back(keyframe);
         if (m_keyframe_buffer.size() > 100)
@@ -196,7 +194,7 @@ namespace DWIO {
             std::cout << "定位代码执行时间：" << duration.count() << " 毫秒" << std::endl;
 
             bool NewSubmap = sceneRecoEngine->showHashTableAndVoxelAllocCondition(scene,renderState_vh);
-            if(NewSubmap)
+            if(NewSubmap)//应该让新子图与旧子图一起更新几帧之后再完全使用新子图才对
             {
                 std::cout<<"**************创建子图！********************"<<std::endl;
                 //复制scene的数据到子图结构中,需要先把所有数据转到cpu
@@ -340,7 +338,8 @@ namespace DWIO {
         //SaveGlobalMap(multi_submaps);
         SaveGlobalMapByVoxel(multi_submaps);
 #else
-        SaveGlobalMap(submaps_);
+        //SaveGlobalMap(submaps_);
+        save_global_map(submaps_);
         //SaveGlobalMapByVoxel2(submaps_);
 #endif
         //回收内存操作：
@@ -375,10 +374,10 @@ namespace DWIO {
         submaps_[submap_index] = new_submap;
 
         //将体素转成子图结构的体素数据，还需要生成子图验证一下，生成子图的代码没变过，那么就是生成submap有问题，是用new搞的？
-        ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        meshingEngineCpu->MeshScene(mesh_cpu ,new_submap->blocks_, new_submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU),SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE,
-                                    m_data_config.voxel_resolution,new_submap->submap_pose.cast<float>());
-        mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(new_submap->submap_id)+ "scene.ply");
+        // ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
+        // meshingEngineCpu->MeshScene(mesh_cpu ,new_submap->blocks_, new_submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU),SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE,
+        //                             m_data_config.voxel_resolution,new_submap->submap_pose.cast<float>());
+        // mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(new_submap->submap_id)+ "scene.ply");
 
 
         // DWIO::submap new_submap(pose_,submap_index,SDF_BUCKET_NUM,SDF_EXCESS_LIST_SIZE);
@@ -391,7 +390,6 @@ namespace DWIO {
         //                             m_data_config.voxel_resolution,new_submap.submap_pose.cast<float>());
         // mesh_cpu->saveBinPly(m_data_config.datasets_path + std::to_string(new_submap.submap_id)+ "scene.ply");
         submap_index++;
-        std::cout<<"get submap()"<<std::endl;
         return new_submap;
     }
 
@@ -826,9 +824,8 @@ namespace DWIO {
 
     }
 
-    void Pipeline::save_global_map(std::map<uint32_t,DWIO::submap>&submaps_)
+    void Pipeline::save_global_map(std::map<uint32_t,DWIO::submap*>&submaps_)
     {
-   
         //在这里生成地图！
         ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
         meshingEngineCpu->MeshScene_global(mesh_cpu,submaps_,m_data_config.voxel_resolution);
