@@ -178,20 +178,22 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint
 	{
 		auto& submap = it.second;
 		nums++;
-		if(nums>2)
-		{
-			break;
-		}
+		// if(nums>2)
+		// {
+		// 	break;
+		// }
+		submap->local_translation = submap->local_translation / factor;
+
 		for(auto& block : submap->blocks_)
 		{
-			std::cout<<"遍历子图的每个block"<<std::endl;
+			//std::cout<<"遍历子图的每个block"<<std::endl;
 			Eigen::Vector3i submap_pose = block.second->block_pos.cast<int>() * SDF_BLOCK_SIZE;
 			//遍历block
 			for (int z = 0; z < SDF_BLOCK_SIZE; z++){
 				for (int y = 0; y < SDF_BLOCK_SIZE; y++){
 					for (int x = 0; x < SDF_BLOCK_SIZE; x++) {
 						Vertex vertList[12];
-						int cubeIndex = buildVertListMulti(vertList, submap_pose, Vector3i(x, y, z),submaps_,it.first,factor);
+						int cubeIndex = buildVertListMulti(vertList, submap_pose, Vector3i(x, y, z),submaps_, it.first, factor);
 						if (cubeIndex < 0) continue;
 						//std::cout<<"get a triangles!"<<"nototal: "<<noTriangles<<std::endl;
 						for (int i = 0; triangleTable[cubeIndex][i] != -1; i += 3)
@@ -211,6 +213,4 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint
 
 	mesh->noTotalTriangles = noTriangles;
 
-
-	//2、遍历所有子图的blocks_;
 }
