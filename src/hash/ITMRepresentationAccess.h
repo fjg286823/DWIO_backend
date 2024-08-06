@@ -325,10 +325,16 @@ inline float readFromSDF_float_interpolated(std::map<uint32_t,DWIO::submap*>&sub
         auto& submap = it.second; 
         //转到子图坐标系
         Vector3f point_local =submap->local_rotation.transpose().cast<float>() *(point - submap->local_translation.cast<float>());
+        Vector3i point_local_i;
+        point_local_i.x() = std::round(point_local.x());
+        point_local_i.y() = std::round(point_local.y());
+        point_local_i.z() = std::round(point_local.z());
         int vmIndex_tmp, maxW;
-        float sdf = readFromSDF_voxel_interpolated(submap->blocks_, submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU), 
-                            point_local, vmIndex_tmp, maxW);
-        if (!vmIndex_tmp) continue;
+        // float sdf = readFromSDF_voxel_interpolated(submap->blocks_, submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU), 
+        //                     point_local, vmIndex_tmp, maxW);
+        float sdf = readVoxel_new_submap(submap->blocks_,submap->hashEntries_submap->GetData(MEMORYDEVICE_CPU),point_local_i,vmIndex_tmp).tsdf;
+        if (!vmIndex_tmp)
+            continue;
         vmIndex = true;
 
         sum_sdf += (float)maxW * sdf;
@@ -336,6 +342,8 @@ inline float readFromSDF_float_interpolated(std::map<uint32_t,DWIO::submap*>&sub
 
     }
     if (sum_weights == 0) return 1.0f;
+
+
 
     return (sum_sdf / (float)sum_weights);
 }

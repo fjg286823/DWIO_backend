@@ -166,11 +166,14 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene(ITMMesh *mesh, TVoxel* globalVBA , 
 }
 
 template<class TVoxel>//for Globalmap
-void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint32_t,DWIO::submap*>&submaps_,float factor)
+void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint32_t,DWIO::submap*>&submaps_,float factor,ITMHashEntry* global_hashTable)
 {
 	ITMMesh::Triangle *triangles = mesh->triangles->GetData(MEMORYDEVICE_CPU);
 
 	int noTriangles = 0, noMaxTriangles = mesh->noMaxTriangles;
+
+	int extraList = SDF_EXCESS_LIST_SIZE;
+
 	//1、遍历所有子图
 	std::cout<<"遍历子图"<<std::endl;
 	int nums=0;
@@ -186,8 +189,75 @@ void ITMMeshingEngine_CPU<TVoxel>::MeshScene_global(ITMMesh *mesh, std::map<uint
 
 		for(auto& block : submap->blocks_)
 		{
-			//std::cout<<"遍历子图的每个block"<<std::endl;
+			//不能每个重复的block被提取，要用一个global hash来表示然后去除重复的
+			//每次开始前先进行查找，查找有了就跳过，没有就插入对应的hash条目，这个hash条目可以被设计的小一点这样就可以避免重复的提取了
 			Eigen::Vector3i submap_pose = block.second->block_pos.cast<int>() * SDF_BLOCK_SIZE;
+			std::cout << "1" << std::endl;
+			Eigen::Vector3f global_pose = submap->local_rotation * submap_pose.cast<float>() + submap->local_translation;
+			std::cout<<"2"<<std::endl;
+			Eigen::Vector3i global_pose_i;
+			global_pose_i.x() = std::round(global_pose.x() / SDF_BLOCK_SIZE);
+			global_pose_i.y() = std::round(global_pose.y() / SDF_BLOCK_SIZE);
+			global_pose_i.z() = std::round(global_pose.z() / SDF_BLOCK_SIZE);
+			int globalHashIndex = hashIndexCPU(global_pose_i);
+			std::cout<<"3"<<std::endl;
+            ITMHashEntry hashEntry = global_hashTable[globalHashIndex];
+			bool isFound =false;
+			bool isExtra =false;
+
+			if(IS_EQUAL3(hashEntry.pos, global_pose_i) && hashEntry.ptr >= -1)
+			{
+				isFound =true;
+			}
+			if(!isFound)//是否在额外链表中
+			{
+				if(hashEntry.ptr >= -1){
+
+					while(hashEntry.offset >= 1){
+						globalHashIndex = SDF_BUCKET_NUM + hashEntry.offset - 1;
+						hashEntry = global_hashTable[globalHashIndex];
+						if(IS_EQUAL3(hashEntry.pos, global_pose_i))
+						{
+							isFound = true;
+							break;
+						}
+					}
+					isExtra =true;//用来表示是否是在额外列表区域没找到
+				}
+			}
+			std::cout<<"4"<<std::endl;
+			if(isFound)
+				continue;
+			else{
+				if(isExtra)//hash条目要创建在额外列表的地方
+				{
+					ITMHashEntry hashEntry_temp{};
+					hashEntry_temp.pos.x = global_pose_i.x();
+					hashEntry_temp.pos.y = global_pose_i.y();
+					hashEntry_temp.pos.z = global_pose_i.z();
+					hashEntry_temp.ptr = -1;
+
+					int exlOffset = extraList--;
+					if(exlOffset < 0)//如果额外链表不够了就跳过这个block的处理
+						continue;
+					
+					global_hashTable[globalHashIndex].offset = exlOffset + 1; 
+					global_hashTable[SDF_BUCKET_NUM + exlOffset] = hashEntry_temp; 
+				}
+				else{
+					//顺序部分插入
+					ITMHashEntry hashEntry_temp{};
+					hashEntry_temp.pos.x = global_pose_i.x();
+					hashEntry_temp.pos.y = global_pose_i.y();
+					hashEntry_temp.pos.z = global_pose_i.z();
+					hashEntry_temp.ptr = -1;
+					hashEntry_temp.offset = 0;
+
+					global_hashTable[globalHashIndex] = hashEntry_temp;
+				}
+			}
+
+			std::cout<<"5"<<std::endl;
 			//遍历block
 			for (int z = 0; z < SDF_BLOCK_SIZE; z++){
 				for (int y = 0; y < SDF_BLOCK_SIZE; y++){

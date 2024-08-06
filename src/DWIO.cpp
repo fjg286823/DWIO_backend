@@ -88,10 +88,10 @@ namespace DWIO {
         m_INS.GetInitialPose(m_pose, m_data_config.init_position.y);
         Eigen::Matrix4d interpolatePose = m_pose;
         GlobalPose = m_pose;
-        if(m_num_frame==0)
-        {
-            scene->initial_pose = m_pose;
-        }
+        // if(m_num_frame==0)
+        // {
+        //     scene->initial_pose = m_pose;
+        // }
         m_pose = scene->initial_pose.inverse() * m_pose;//转到子图坐标系了
 
         int submap_size[] = {0, 0, 0, 0, 0, 0};
@@ -132,7 +132,7 @@ namespace DWIO {
                                                                     CSM_pose);
         }
         keyframe.camera_pose = scene->initial_pose * m_pose;
-        GlobalPose = keyframe.camera_pose;
+        GloblaPose = keyframe.camera_pose;
 
         m_keyframe_buffer.push_back(keyframe);
         if (m_keyframe_buffer.size() > 100)
@@ -204,12 +204,14 @@ namespace DWIO {
 #else
                 DWIO::submap* new_submap = get_submap(scene,scene->initial_pose,submap_index);//这样一次需要的时间也太久了！
 #endif
-                
-                //清理scene的调用Reset函数，同时把体素数据给清空了
+                scene->initial_pose = GloblaPose;//还待处理的是需要给新子图同步更新几帧，然后再完全使用新子图，不谈很容易
+                // 清理scene的调用Reset函数，同时把体素数据给清空了
                 sceneRecoEngine->ResetScene(scene);
                 scene->globalCache->ResetVoxelBlocks();
                 m_num_frame = 0;//保证每个子图的第一帧直接建图，不定位
                 //将子图插入到后端中（写一个函数实现）目前直接在GetSubmap中实现了
+                //回环检测什么时候做？
+                //插入到后端因子图中，
             }
         }
 
@@ -828,7 +830,8 @@ namespace DWIO {
     {
         //在这里生成地图！
         ITMMesh *mesh_cpu = new ITMMesh(MEMORYDEVICE_CPU);
-        meshingEngineCpu->MeshScene_global(mesh_cpu,submaps_,m_data_config.voxel_resolution);
+        DWIO::MemoryBlock<ITMHashEntry> *global_hash = new DWIO::MemoryBlock<ITMHashEntry>(SDF_BUCKET_NUM+SDF_EXCESS_LIST_SIZE, MEMORYDEVICE_CPU);  
+        meshingEngineCpu->MeshScene_global(mesh_cpu, submaps_, m_data_config.voxel_resolution,global_hash->GetData(MEMORYDEVICE_CPU));
         mesh_cpu->saveBinPly(m_data_config.datasets_path + "scene.ply");  
         std::cout<<"save map successfully!"<<std::endl;         
     }
