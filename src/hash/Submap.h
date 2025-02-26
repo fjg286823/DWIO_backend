@@ -48,8 +48,10 @@ namespace DWIO
         {
             hashEntries_submap->Free();
             delete hashEntries_submap;
-            blocks_.clear();
+            //blocks_.clear();
+            cleanUpBlocks(blocks_);
         }
+
         submap(Eigen::Matrix4d pose_,u_int32_t id_,int bucket_nums,int extra_nums)
         {
             submap_id = id_;
@@ -85,6 +87,13 @@ namespace DWIO
         {
             ITMVoxel_d* res = blocks_[index]->voxel_data;
             return res;
+        }
+
+        void cleanUpBlocks(std::map<int, BlockData*> &blocks) {
+            for (auto& pair : blocks) {
+                delete pair.second;  // 删除 BlockData 对象
+            }
+            blocks.clear();  // 清空 map
         }
     };
 

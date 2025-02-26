@@ -4,8 +4,9 @@
 #include "data.h"
 
 #define DIVSHORTMAX 0.0000305185f
-#define SHORTMAX 32767 
+#define SHORTMAX 32767
 
+typedef pcl::PointXYZI PointType;
 
 //#define SUBMAP
 struct Vertex

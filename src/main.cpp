@@ -89,6 +89,11 @@ int main() {
     std::deque<CartographerPose> pose_2d_buffer;
     std::deque<double> interpolation_ratio_buffer;
 
+    // std::cout << "initial particle" << std::endl;
+    // std::vector<int> particle_level = {10240, 3072, 1024};
+    // DWIO::internal::QuaternionData PST(particle_level,data_config.PST_path);
+    // DWIO::internal::ParticleSearchData search_data(particle_level);
+
     DWIO::Pipeline pipeline{camera_config, data_config, option_config};
 
     data_loader loader(data_config.datasets_path);
@@ -155,93 +160,38 @@ int main() {
             pipeline.m_INS.m_LiDAR_pose = timestamped_pose.pose;
             if (!pipeline.m_depth_img_buffer.empty()) {
 
-                is_tracking_success = pipeline.ProcessFrameHash(pipeline.m_depth_img_buffer.front(),
+                // is_tracking_success = pipeline.ProcessFrameHash(pipeline.m_depth_img_buffer.front(),
+                //                           pipeline.m_color_img_buffer.front(),
+                //                           shaded_img,TotalTriangles);
+                is_tracking_success = pipeline.ProcessFrameMutil(pipeline.m_depth_img_buffer.front(),
                                           pipeline.m_color_img_buffer.front(),
-                                          shaded_img,TotalTriangles);
+                                          shaded_img);
+
+                std::cout<<"-----------------------------------------------------"<<std::endl;
             } else
                 break;
 
-            //glClear(GL_COLOR_BUFFER_BIT);
-            //if(is_tracking_success){
-                glClear(GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT); 
-                color_cam.Activate();
-                image_texture.Upload(pipeline.m_color_img_buffer.front().data, GL_BGR, GL_UNSIGNED_BYTE);
-                image_texture.RenderToViewportFlipY();
-                depth_cam.Activate();
-                pipeline.m_depth_img_buffer.front().convertTo(pipeline.m_depth_img_buffer.front(), CV_8U, 256 / 5000.0);
-                depth_texture.Upload(pipeline.m_depth_img_buffer.front().data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
-                depth_texture.RenderToViewportFlipY();
-                shaded_cam.Activate();
-                shaded_texture.Upload(shaded_img.data, GL_BGR, GL_UNSIGNED_BYTE);
-                shaded_texture.RenderToViewportFlipY();
-                //显示点云
-                
-                //std::cout<<"get points："<<TotalTriangles<<std::endl;
-                //track failed 会导致被多次释放
+            glClear(GL_COLOR_BUFFER_BIT |GL_DEPTH_BUFFER_BIT); 
+            color_cam.Activate();
+            image_texture.Upload(pipeline.m_color_img_buffer.front().data, GL_BGR, GL_UNSIGNED_BYTE);
+            image_texture.RenderToViewportFlipY();
+            depth_cam.Activate();
+            pipeline.m_depth_img_buffer.front().convertTo(pipeline.m_depth_img_buffer.front(), CV_8U, 256 / 10000.0);
+            depth_texture.Upload(pipeline.m_depth_img_buffer.front().data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+            depth_texture.RenderToViewportFlipY();
+            shaded_cam.Activate();
+            shaded_texture.Upload(shaded_img.data, GL_BGR, GL_UNSIGNED_BYTE);
+            shaded_texture.RenderToViewportFlipY();
 
-                d_cam.Activate(s_cam);
-                // glBegin(GL_TRIANGLES);
-                //     for(int i=0;i<TotalTriangles;i++){
-                //         //获取点
-                //         DWIO::ITMMesh::Triangle triangle = pipeline.mesh->GetTriangle(i);
-                //         glColor3f(triangle.p0.c.z/255.0f, triangle.p0.c.y/255.0f, triangle.p0.c.x/255.0f); // 红色
-                //         glVertex3f(triangle.p0.p.x, triangle.p0.p.y, triangle.p0.p.z); // 顶点1
-                //         glColor3f(triangle.p1.c.z/255.0f, triangle.p1.c.y/255.0f, triangle.p1.c.x/255.0f); // 红色
-                //         glVertex3f(triangle.p1.p.x, triangle.p1.p.y, triangle.p1.p.z); // 顶点1
-                //         glColor3f(triangle.p2.c.z/255.0f, triangle.p2.c.y/255.0f, triangle.p2.c.x/255.0f); // 红色
-                //         glVertex3f(triangle.p2.p.x, triangle.p2.p.y, triangle.p2.p.z); // 顶点1
-                //     }
-                // glEnd();
-                // pipeline.mesh->ClearCpuTriangles();
-                // //加入当前机器人
-                // glColor3f(1.0f, 1.0f, 1.0f); 
-                // glBegin(GL_LINE_LOOP);
-                //     int robot_x = pipeline.m_pose(0,3);
-                //     int robot_z = pipeline.m_pose(2,3);
-                //     int robot_y = pipeline.m_pose(1,3);
-                //     const int num_segments = 100;
-                //     const float radius = 100.0f;
-                //     for (int i = 0; i < num_segments; ++i) {
-                //         const float theta = 2.0f * M_PI * static_cast<float>(i) / static_cast<float>(num_segments);
-                //         const float x = robot_x + radius * cosf(theta);
-                //         const float z = robot_z + radius * sinf(theta);
-                //         glColor3f(0.0f, 0.0f, 0.0f); // 黑色
-                //         glVertex3f(x, robot_y, z);
-                //     }
-                // glEnd();
-                // glColor3f(1.0f, 1.0f, 1.0f); 
-                // //加入当前帧点云
-                // Eigen::Matrix<double, 4, 1> cur_frame;
-                // Eigen::Matrix<double, 4, 1> world_frame;
-                // glBegin(GL_POINTS);
-                //     cv::Mat current_frame = pipeline.m_frame_data.host_vertex_map;
-                //     for(int i=0;i<current_frame.rows;i+=4)
-                //     {
-                //         for(int j=0;j<current_frame.cols;j+=4)
-                //         {
-                //             cv::Vec3f vertex = current_frame.at<cv::Vec3f>(i, j);
-                //             cur_frame.x() = vertex[0];
-                //             cur_frame.y() = vertex[1];
-                //             cur_frame.z() = vertex[2];
-                //             cur_frame(3,0) = 1.0;
-
-                //             world_frame =  pipeline.m_pose*cur_frame;
-                //             glColor3f(0.0f, 1.0f, 0.0f); 
-                //             glVertex3f(world_frame.x(), world_frame.y(), world_frame.z());
-                //         }
-                //     }          
-                // glEnd();
-                // glColor3f(1.0f, 1.0f, 1.0f); 
-
-                // glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-                pangolin::FinishFrame();
-            //}
+            pangolin::FinishFrame();
 
         }
         pose_last_time = pose_now_time;
 
         
     }
+    //添加一个函数对最后一个子图进行提取和回环检测
+    pipeline.get_last_submap();
     pipeline.SaveMap();
 
     return 0;

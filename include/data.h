@@ -23,6 +23,9 @@
 #include <deque>
 #include <pangolin/pangolin.h>
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 #else
 #include <cuda_runtime.h>
 #include <opencv2/core/cuda.hpp>
@@ -31,6 +34,9 @@
 
 #include <math.h>
 #include <map>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
 
 
 using cv::cuda::GpuMat;
@@ -105,6 +111,14 @@ namespace DWIO {
         std::string datasets_path{"./"};
         int point_buffer_size{3 * 2000000};
 
+        //粒子滤波！
+        int max_iteration {20};
+        std::string PST_path {"~"};
+        float scaling_coefficient1 {0.12};
+        float scaling_coefficient2 {0.12};
+        float init_fitness {0.5};
+        float momentum {0.9};
+
         explicit DataConfiguration(const std::string &data_file) {
             // std::cout << "[Main] Read datasets configure file!" << std::endl;
             cv::FileStorage data_setting(data_file, cv::FileStorage::READ);
@@ -124,6 +138,13 @@ namespace DWIO {
             float init_position_z = (float) (volume_size.z) / 2 * voxel_resolution - init_z;
             init_position = make_float3(init_position_x, init_position_y, init_position_z);
             data_setting["datasets_path"] >> datasets_path;
+            
+            data_setting["PST_path"]>>PST_path;
+            max_iteration=data_setting["max_iteration"];
+            scaling_coefficient1=data_setting["scaling_coefficient1"];
+            scaling_coefficient2=data_setting["scaling_coefficient2"];
+            init_fitness=data_setting["init_fitness"];
+            momentum=data_setting["momentum"];
             data_setting.release();
         }
     };
@@ -208,12 +229,11 @@ namespace DWIO {
             int3 volume_size;
             float voxel_scale;
 
-            VolumeData(const int3 _volume_size, const float _voxel_scale) : tsdf_volume(
-                    cv::cuda::createContinuous(_volume_size.y * _volume_size.z / 1000, _volume_size.x, CV_16SC1)),//减小一点
+            VolumeData(const int3 _volume_size, const float _voxel_scale) : tsdf_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z / 1000, _volume_size.x/100, CV_16SC1)),//减小一点
                                                                             weight_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z / 1000,
-                                                                                                                     _volume_size.x, CV_16SC1)),
+                                                                                                                     _volume_size.x/100, CV_16SC1)),
                                                                             color_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z / 1000,
-                                                                                                                    _volume_size.x, CV_8UC3)),
+                                                                                                                    _volume_size.x/100, CV_8UC3)),
                                                                             volume_size(_volume_size), voxel_scale(_voxel_scale) {
                 tsdf_volume.setTo(32767);
                 weight_volume.setTo(0);
@@ -303,6 +323,90 @@ namespace DWIO {
                 GN_value = cv::Mat::zeros(1, 1, CV_32FC1);
                 gpu_GN_value = cv::cuda::createContinuous(1, 1, CV_32FC1);
             }
+        };
+
+        struct QuaternionData{
+            std::vector<GpuMat> q;
+            std::vector<cv::Mat> q_trans;
+            int num=20;
+
+  
+            QuaternionData(std::vector<int> particle_level, std::string PST_path)
+            {
+                q.resize(60);
+                q_trans.resize(60);
+                for (int i=0;i<num;i++){
+                    q_trans[i]=cv::Mat(particle_level[0],6,CV_32FC1);
+                    q[i]=cv::cuda::createContinuous(particle_level[0], 6, CV_32FC1);
+                    q_trans[i]=cv::imread(PST_path+"pst_10240_"+std::to_string(i)+".tiff",cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+                    q_trans[i].ptr<float>(0)[0]=0;
+                    q_trans[i].ptr<float>(0)[1]=0;
+                    q_trans[i].ptr<float>(0)[2]=0;
+                    q_trans[i].ptr<float>(0)[3]=0;
+                    q_trans[i].ptr<float>(0)[4]=0;
+                    q_trans[i].ptr<float>(0)[5]=0;
+                    q[i].upload(q_trans[i]);
+
+                }
+                for (int i=num;i<num*2;i++){
+                    q_trans[i]=cv::Mat(particle_level[1],6,CV_32FC1);
+                    q[i]=cv::cuda::createContinuous(particle_level[1], 6, CV_32FC1);
+                    q_trans[i]=cv::imread(PST_path+"pst_3072_"+std::to_string(i-20)+".tiff",cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+                    q_trans[i].ptr<float>(0)[0]=0;
+                    q_trans[i].ptr<float>(0)[1]=0;
+                    q_trans[i].ptr<float>(0)[2]=0;
+                    q_trans[i].ptr<float>(0)[3]=0;
+                    q_trans[i].ptr<float>(0)[4]=0;
+                    q_trans[i].ptr<float>(0)[5]=0;
+                    q[i].upload(q_trans[i]);
+
+                }
+                for (int i=num*2;i<num*3;i++){
+                    q_trans[i]=cv::Mat(particle_level[2],6,CV_32FC1);
+                    q[i]=cv::cuda::createContinuous(particle_level[2], 6, CV_32FC1);
+                    q_trans[i]=cv::imread(PST_path+"pst_1024_"+std::to_string(i-40)+".tiff",cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
+                    q_trans[i].ptr<float>(0)[0]=0;
+                    q_trans[i].ptr<float>(0)[1]=0;
+                    q_trans[i].ptr<float>(0)[2]=0;
+                    q_trans[i].ptr<float>(0)[3]=0;
+                    q_trans[i].ptr<float>(0)[4]=0;
+                    q_trans[i].ptr<float>(0)[5]=0;
+                    q[i].upload(q_trans[i]);
+
+                }
+                std::cout << "read particle" << std::endl;
+
+            }
+            
+        };
+
+        struct ParticleSearchData{
+            std::vector<GpuMat> gpu_search_count;
+            std::vector<cv::Mat> search_count;
+            std::vector<GpuMat> gpu_search_value;
+            std::vector<cv::Mat> search_value;
+
+            ParticleSearchData(std::vector<int> particle_level)
+            {
+                gpu_search_count.resize(3);
+                search_count.resize(3);
+                gpu_search_value.resize(3);
+                search_value.resize(3);
+                search_count[0]=cv::Mat::zeros(particle_level[0],1,CV_32FC1);
+                search_count[1]=cv::Mat::zeros(particle_level[1],1,CV_32FC1);
+                search_count[2]=cv::Mat::zeros(particle_level[2],1,CV_32FC1);
+                gpu_search_count[0]=cv::cuda::createContinuous(particle_level[0], 1, CV_32FC1);
+                gpu_search_count[1]=cv::cuda::createContinuous(particle_level[1], 1, CV_32FC1);
+                gpu_search_count[2]=cv::cuda::createContinuous(particle_level[2], 1, CV_32FC1);
+                search_value[0]=cv::Mat::zeros(particle_level[0],1,CV_32FC1);
+                search_value[1]=cv::Mat::zeros(particle_level[1],1,CV_32FC1);
+                search_value[2]=cv::Mat::zeros(particle_level[2],1,CV_32FC1);
+                gpu_search_value[0]=cv::cuda::createContinuous(particle_level[0], 1, CV_32FC1);
+                gpu_search_value[1]=cv::cuda::createContinuous(particle_level[1], 1, CV_32FC1);
+                gpu_search_value[2]=cv::cuda::createContinuous(particle_level[2], 1, CV_32FC1);
+            }
+            
+
         };
 
         struct CloudData

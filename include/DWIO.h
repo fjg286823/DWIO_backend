@@ -7,10 +7,12 @@
 
 #include "INS.h"
 #include "utility.hpp"
-
+#include <fstream>
+#include <iostream>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
+#include <thread>
 
 #include "../src/hash/ITMScene.h"
 #include "../src/hash/ITMVoxelTypes.h"
@@ -25,7 +27,14 @@
 #include "../src/hash/Submap.h"
 #include "../src/hash/ITMRepresentationAccess.h"
 #include "Fusion.h"
+#include "backend.h"
+#include "LocalMap.h"
 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+
+using Matf61da = Eigen::Matrix<double, 6, 1, Eigen::DontAlign>;
 namespace DWIO {
 
     struct KeyFrame {
@@ -50,6 +59,8 @@ namespace DWIO {
 
         bool ProcessFrameHash(const cv::Mat_<float> &depth_map, const cv::Mat_<cv::Vec3b> &color_img, cv::Mat &shaded_img,int& TotalTriangles);
 
+        bool ProcessFrameMutil(const cv::Mat_<float> &depth_map, const cv::Mat_<cv::Vec3b> &color_img, cv::Mat &shaded_img);
+
         void SaveMap();       
         
         void SaveTrajectory(const KeyFrame &keyframe);
@@ -63,13 +74,14 @@ namespace DWIO {
 
         DWIO::submap* get_submap(DWIO::ITMScene<ITMVoxel_d, ITMVoxelBlockHash>* scene,Eigen::Matrix4d pose_,u_int32_t& submap_index);
 
-        void SaveGlobalMap(std::map<uint32_t,DWIO::Submap>&multi_submaps);
-        void SaveGlobalMap(std::map<uint32_t,DWIO::submap*>&submaps_);
-        void SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps);
+
+        // void SaveGlobalMapByVoxel(std::map<uint32_t,DWIO::Submap>&multi_submaps);
         void save_global_map(std::map<uint32_t,DWIO::submap*>&submaps_);
 
         void FuseSubmaps(ITMHashEntry* GlobalHashTable,ITMVoxel_d* GlobalVoxelData,DWIO::Submap& submap);
         void CheckGlobalMap(const ITMHashEntry* GlobalHashTable,int total);
+
+        void get_last_submap();
 
 
 
@@ -91,6 +103,17 @@ namespace DWIO {
 
         DWIO::ITMMesh *mesh;
         internal::FrameData m_frame_data;
+        std::shared_ptr<spdlog::logger> mylogger;
+
+        //粒子滤波：
+        float iter_tsdf;
+        internal::QuaternionData* PST;
+        internal::ParticleSearchData* search_data;
+        const std::vector<int> particle_level = {10240,3072,1024};
+        Matf61da initialize_search_size;
+        bool previous_frame_success=false;
+
+
 
     private:
         const CameraConfiguration m_camera_config;
@@ -98,7 +121,6 @@ namespace DWIO {
         const OptionConfiguration m_option_config;
 
         internal::VolumeData m_volume_data;
-        //internal::FrameData m_frame_data;
         internal::TransformCandidates m_candidates;
         internal::SearchData m_search_data;
 
@@ -113,9 +135,13 @@ namespace DWIO {
         std::map<uint32_t,DWIO::Submap>multi_submaps;//先把子图放这里
         std::map<uint32_t,DWIO::submap*>submaps_;
         uint32_t submap_index = 0;
-        
+        BackendOptimazation* backend;
 
-    };
+
+        //新的处理逻辑
+        std::deque<DWIO::LocalMap*> activateMaps;
+
+        };
 
     namespace internal {
         void SurfaceMeasurement(const cv::Mat_<cv::Vec3b> &color_frame,
@@ -135,6 +161,22 @@ namespace DWIO {
                             const ITMHashEntry *hashTable,
                             float voxel_resolution,
                             Eigen::Matrix4d &CSM_pose);
+
+        bool ParticlePoseEstimation(const QuaternionData &quaternions,
+                                    ParticleSearchData &particle_search_data,
+                                    SearchData &search_data,
+                                    Eigen::Matrix4d &pose,
+                                    FrameData &frame_data,
+                                    const CameraConfiguration &cam_params,
+                                    const OptionConfiguration &option_config,
+                                    const DataConfiguration &controller_config,
+                                    const std::vector<int> particle_level,
+                                    float *iter_tsdf,
+                                    bool *previous_frame_success,
+                                    Matf61da &initialize_search_size,
+                                    const ITMVoxel_d *voxelData,
+                                    const ITMHashEntry *hashTable,
+                                    float voxel_resolution);
 
         namespace cuda {
             void MapSegmentation(const cv::cuda::GpuMat vertex_map_current,

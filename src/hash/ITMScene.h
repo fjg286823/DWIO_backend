@@ -27,18 +27,19 @@ namespace DWIO
 
 
 		int maxW = 128;
-		float voxel_resolution = 10.0f;
+		float voxel_resolution = 20.0f;
 		float viewFrustum_min, viewFrustum_max;
 
 		Eigen::Matrix4d initial_pose;
 
-		ITMScene( bool _useSwapping, MemoryDeviceType _memoryType)
+		ITMScene( bool _useSwapping, MemoryDeviceType _memoryType,float factor)
 			: index(_memoryType), localVBA(_memoryType, index.getNumAllocatedVoxelBlocks(), index.getVoxelBlockSize())
 		{
 			if (_useSwapping) globalCache = new ITMGlobalCache<TVoxel>();
 			else globalCache = NULL;
-			viewFrustum_min = 600.0f;
-			viewFrustum_max = 3000.0f;
+			viewFrustum_min = 10.0f;
+			viewFrustum_max = 5000.0f;
+			voxel_resolution = factor;
 			initial_pose.setIdentity();
 		}
 

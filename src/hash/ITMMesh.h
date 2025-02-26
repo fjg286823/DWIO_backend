@@ -4,6 +4,7 @@
 #include "../cuda/include/common.h"
 #include <stdlib.h>
 
+
 #ifndef BYTE
 typedef unsigned char BYTE;
 #endif
@@ -30,7 +31,7 @@ namespace DWIO
 #ifdef SUBMAP
 		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 32 * 16;//* 32 * 16
 #else
-		static const uint noMaxTriangles_default = (SDF_BUCKET_NUM + SDF_EXCESS_LIST_SIZE) * 24;
+		static const uint noMaxTriangles_default = (MAP_BUCKET_NUM + MAP_EXCESS_LIST_SIZE) * 24;
 #endif
 		uint noMaxTriangles;
 
@@ -47,17 +48,54 @@ namespace DWIO
 			std::cout<<"allocate done!"<<std::endl;
 		}
 
+		void get_submap_points(pcl::PointCloud<PointType>::Ptr cloud) {
+			cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+			if (this->memoryType == MEMORYDEVICE_CUDA)
+				cpu_triangles->SetFrom(triangles, DWIO::MemoryBlock<Triangle>::CUDA_TO_CPU);//将顶点信息从gpu转到cpu上
+			else
+				cpu_triangles->SetFrom(triangles,DWIO::MemoryBlock<Triangle>::CPU_TO_CPU);
+
+
+			Triangle *triangleArray = cpu_triangles->GetData(MEMORYDEVICE_CPU);
+			if(!triangleArray) {
+				std::cout<<"triangleArray is nullptr!"<<std::endl;
+				exit(-1);
+			}
+
+			for (uint i = 0; i < this->noTotalTriangles; i++)
+			{
+				pcl::PointXYZI point;
+				point.x = triangleArray[i].p0.p.x/1000;
+				point.y = triangleArray[i].p0.p.z/1000;
+				point.z = triangleArray[i].p0.p.y/1000;
+				point.intensity =1.0;
+
+				cloud->points.push_back(point);
+				point.x = triangleArray[i].p1.p.x/1000;
+				point.y = triangleArray[i].p1.p.z/1000;
+				point.z = triangleArray[i].p1.p.y/1000;
+				point.intensity =1.0;
+				cloud->points.push_back(point);
+				point.x = triangleArray[i].p2.p.x/1000;
+				point.y = triangleArray[i].p2.p.z/1000;
+				point.z = triangleArray[i].p2.p.y/1000;
+				point.intensity =1.0;
+				cloud->points.push_back(point);
+			}
+			cloud->width = cloud->points.size();
+			cloud->height = 1;
+			cloud->is_dense = false;
+			std::cout<<"get points "<<cloud->points.size() <<" over"<<std::endl;
+		}
+
+
 		void WriteSTL(const char *fileName)
 		{
-			//DWIO::MemoryBlock<Triangle> *cpu_triangles; 
-			bool shoulDelete = false;
-			if (memoryType == MEMORYDEVICE_CUDA)
-			{
-				cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+			cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+			if (this->memoryType == MEMORYDEVICE_CUDA)
 				cpu_triangles->SetFrom(triangles, DWIO::MemoryBlock<Triangle>::CUDA_TO_CPU);//将顶点信息从gpu转到cpu上
-				shoulDelete = true;
-			}
-			else cpu_triangles = triangles;
+			else
+				cpu_triangles->SetFrom(triangles,DWIO::MemoryBlock<Triangle>::CPU_TO_CPU);
 
 			Triangle *triangleArray = cpu_triangles->GetData(MEMORYDEVICE_CPU);
 
@@ -87,16 +125,11 @@ namespace DWIO
 
 					fwrite(&attribute, sizeof(short), 1, f);
 
-					//fprintf(f, "v %f %f %f\n", triangleArray[i].p0.x(), triangleArray[i].p0.y(), triangleArray[i].p0.z());
-					//fprintf(f, "v %f %f %f\n", triangleArray[i].p1.x(), triangleArray[i].p1.y(), triangleArray[i].p1.z());
-					//fprintf(f, "v %f %f %f\n", triangleArray[i].p2.x(), triangleArray[i].p2.y(), triangleArray[i].p2.z());
+
 				}
 
-				//for (uint i = 0; i<noTotalTriangles; i++) fprintf(f, "f %d %d %d\n", i * 3 + 2 + 1, i * 3 + 1 + 1, i * 3 + 0 + 1);
 				fclose(f);
 			}
-
-			if (shoulDelete) delete cpu_triangles;
 		}
 
 		void savePly(const std::string &filename)
@@ -104,14 +137,14 @@ namespace DWIO
 			std::ofstream file_out{filename};
 			if (!file_out.is_open())
 				return;
-			DWIO::MemoryBlock<Triangle> *cpu_triangles; bool shoulDelete = false;
-			if (memoryType == MEMORYDEVICE_CUDA)
-			{
-				cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+
+			cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+			if (this->memoryType == MEMORYDEVICE_CUDA)
 				cpu_triangles->SetFrom(triangles, DWIO::MemoryBlock<Triangle>::CUDA_TO_CPU);//将顶点信息从gpu转到cpu上
-				shoulDelete = true;
-			}
-			else cpu_triangles = triangles;
+			else
+				cpu_triangles->SetFrom(triangles,DWIO::MemoryBlock<Triangle>::CPU_TO_CPU);
+
+
 			Triangle *triangleArray = cpu_triangles->GetData(MEMORYDEVICE_CPU);
 			file_out << "ply" << std::endl;
 			file_out << "format ascii 1.0" << std::endl;
@@ -147,21 +180,26 @@ namespace DWIO
 		void saveBinPly(const std::string &filename)
 		{
 			std::ofstream file(filename ,std::ios::binary);
-			if (!file.is_open())
+			if (!file.is_open()){
 				return;
-			//DWIO::MemoryBlock<Triangle> *cpu_triangles; 
-			bool shoulDelete = false;
-			if (memoryType == MEMORYDEVICE_CUDA)
-			{
-				cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
-				cpu_triangles->SetFrom(triangles, DWIO::MemoryBlock<Triangle>::CUDA_TO_CPU);//将顶点信息从gpu转到cpu上
-				shoulDelete = true;
 			}
-			else cpu_triangles = triangles;
+
+			cpu_triangles = new DWIO::MemoryBlock<Triangle>(noMaxTriangles, MEMORYDEVICE_CPU);
+			if (this->memoryType == MEMORYDEVICE_CUDA)
+				cpu_triangles->SetFrom(triangles, DWIO::MemoryBlock<Triangle>::CUDA_TO_CPU);//将顶点信息从gpu转到cpu上
+			else
+				cpu_triangles->SetFrom(triangles,DWIO::MemoryBlock<Triangle>::CPU_TO_CPU);
+
 			Triangle *triangleArray = cpu_triangles->GetData(MEMORYDEVICE_CPU);		
 
 			std::vector<std::vector<unsigned int>>	m_FaceIndicesVertices;
 			m_FaceIndicesVertices.resize(noTotalTriangles);
+
+			if(noTotalTriangles==0){
+				std::cout<<"no points!"<<std::endl;
+				exit(-1);
+			}
+
 			for ( unsigned int i = 0; i < ( unsigned int ) noTotalTriangles; i++ )
 			{
 				m_FaceIndicesVertices[i].push_back(3*i+0);
@@ -235,6 +273,7 @@ namespace DWIO
 				file.write ( ( const char* ) &m_FaceIndicesVertices[i][0], numFaceIndices*sizeof ( unsigned int ) );
 			}
 			file.close();
+			std::cout<<"save over!"<<std::endl;
 		}
 
 
@@ -260,7 +299,10 @@ namespace DWIO
 
 		~ITMMesh()
 		{
-			delete triangles;
+			if(triangles)
+				delete triangles;
+			if(cpu_triangles)
+				delete cpu_triangles;
 		}
 
 		// Suppress the default copy constructor and assignment operator

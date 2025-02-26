@@ -31,8 +31,8 @@ namespace DWIO {
                     return;
                 }
 
-                if (parallel_label.ptr(y)[x] > 0.1)
-                    return;
+                // if (parallel_label.ptr(y)[x] > 0.1)
+                //     return;
 
                 Matf31fa vertex_current;
                 vertex_current.x() = vertex_map_current.ptr(y)[x].x;

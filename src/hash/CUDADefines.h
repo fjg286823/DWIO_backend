@@ -24,6 +24,15 @@ inline void __cudaSafeCall( cudaError err, const char *file, const int line )
     }
 }
 
+#define cudaCheckError() { \
+cudaError_t err = cudaGetLastError(); \
+if (err != cudaSuccess) { \
+std::cerr << "CUDA error in " << __FILE__ << " at line " << __LINE__ << ": " \
+<< cudaGetErrorString(err) << std::endl; \
+exit(EXIT_FAILURE); \
+} \
+}
+
 }
 
 #endif

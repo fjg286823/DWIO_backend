@@ -5,12 +5,15 @@
 
 using Vec3ida = Eigen::Matrix<int, 3, 1, Eigen::DontAlign>;
 
-namespace DWIO {
-    namespace internal {
-        namespace cuda {
+namespace DWIO
+{
+    namespace internal
+    {
+        namespace cuda
+        {
 
-            __device__
-            float get_tsdf(const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable, float grid0, float grid1, float grid2) {
+            __device__ float get_tsdf(const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable, float grid0, float grid1, float grid2)
+            {
                 Vector3i globalPos;
                 globalPos << __float2int_rd(grid0), __float2int_rd(grid1), __float2int_rd(grid2);
                 int vmIndex = 0;
@@ -19,8 +22,8 @@ namespace DWIO {
                 return tsdf_get;
             }
 
-            __device__
-            float get_tsdf(const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable, int grid0, int grid1, int grid2) {
+            __device__ float get_tsdf(const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable, int grid0, int grid1, int grid2)
+            {
                 Vector3i globalPos;
                 globalPos << grid0, grid1, grid2;
                 int vmIndex = 0;
@@ -29,8 +32,8 @@ namespace DWIO {
                 return tsdf_get;
             }
 
-            __device__ __inline__
-            float interpolate_trilinearly(const Vec3fda &point, const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable) {
+            __device__ __inline__ float interpolate_trilinearly(const Vec3fda &point, const ITMVoxel_d *localVBA, const ITMHashEntry *hashTable)
+            {
                 Vec3ida point_in_grid = point.cast<int>();
 
                 const float vx = (static_cast<float>(point_in_grid.x()) + 0.5f);
@@ -64,20 +67,21 @@ namespace DWIO {
                        tsdf_x1y1z1 * a * b * c;
             }
 
-            __global__
-            void raycast_tsdf_kernel(ITMVoxel_d *localVBA,
-                                     const ITMHashEntry *hashTable,
-                                     PtrStepSz<uchar3> shading_buffer,
-                                     const float voxel_scale,
-                                     const float truncation_distance,
-                                     const CameraConfiguration cam_parameters,
-                                     const float3 init_pos,
-                                     const Eigen::Matrix<float, 3, 3, Eigen::DontAlign> rotation,
-                                     const Vec3fda translation) {
+            __global__ void raycast_tsdf_kernel(ITMVoxel_d *localVBA,
+                                                const ITMHashEntry *hashTable,
+                                                PtrStepSz<uchar3> shading_buffer,
+                                                const float voxel_scale,
+                                                const float truncation_distance,
+                                                const CameraConfiguration cam_parameters,
+                                                const float3 init_pos,
+                                                const Eigen::Matrix<float, 3, 3, Eigen::DontAlign> rotation,
+                                                const Vec3fda translation)
+            {
                 const int x = blockIdx.x * blockDim.x + threadIdx.x;
                 const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-                if (x >= shading_buffer.cols || y >= shading_buffer.rows) {
+                if (x >= shading_buffer.cols || y >= shading_buffer.rows)
+                {
                     return;
                 }
 
@@ -103,10 +107,10 @@ namespace DWIO {
                 float normal_y = 0;
                 float normal_z = 0;
 
+                float max_search_length = 9000; // 由于原始最大搜索长度为5166.66修改为9米
 
-                float max_search_length = 5166.66;
-
-                while (ray_length < max_search_length) {
+                while (ray_length < max_search_length)
+                {
                     ray_length += truncation_distance * 0.5f;
                     grid = (translation + (ray_direction * (ray_length + truncation_distance * 0.5f))) / voxel_scale;
 
@@ -114,11 +118,12 @@ namespace DWIO {
 
                     tsdf = get_tsdf(localVBA, hashTable, grid(0), grid(1), grid(2));
 
-
-                    if (previous_tsdf < 0.f && tsdf > 0.f) {
+                    if (previous_tsdf < 0.f && tsdf > 0.f)
+                    {
                         break;
                     }
-                    if (previous_tsdf > 0.f && tsdf < 0.f) {
+                    if (previous_tsdf > 0.f && tsdf < 0.f)
+                    {
                         const float t_star = ray_length - truncation_distance * 0.5f * tsdf / (tsdf - previous_tsdf);
 
                         const auto vertex = translation + ray_direction * t_star;
@@ -173,11 +178,13 @@ namespace DWIO {
                     }
                 }
 
-                if (result_x == 0 && result_y == 0 && result_z == 0) {
+                if (result_x == 0 && result_y == 0 && result_z == 0)
+                {
                     return;
                 }
 
-                if (normal_x == 0 && normal_y == 0 && normal_z == 0) {
+                if (normal_x == 0 && normal_y == 0 && normal_z == 0)
+                {
                     return;
                 }
 
@@ -219,7 +226,8 @@ namespace DWIO {
                 const float ambinent_light_y = 0.1;
                 const float ambinent_light_z = 0.1;
                 float light_cos = normal_x * light_direction_x + normal_y * light_direction_y + normal_z * light_direction_z;
-                if (light_cos <= 0) {
+                if (light_cos <= 0)
+                {
                     light_cos = -light_cos;
                 }
 
@@ -236,7 +244,8 @@ namespace DWIO {
                 h_y /= lens;
                 h_z /= lens;
                 float h_cos = normal_x * h_x + normal_y * h_y + normal_z * h_z;
-                if (h_cos < 0) {
+                if (h_cos < 0)
+                {
                     h_cos = -h_cos;
                 }
 
@@ -245,16 +254,19 @@ namespace DWIO {
                 float specular_light_x = 0.5f * light_coffi;
                 float specular_light_y = 0.5f * light_coffi;
                 float specular_light_z = 0.5f * light_coffi;
-                shading_buffer.ptr(y)[x].x = (uchar) ((ambinent_light_x + diffuse_light_x + specular_light_x) * 255);
-                shading_buffer.ptr(y)[x].y = (uchar) ((ambinent_light_y + diffuse_light_y + specular_light_y) * 255);
-                shading_buffer.ptr(y)[x].z = (uchar) ((ambinent_light_z + diffuse_light_z + specular_light_z) * 255);
-                if (ambinent_light_x + diffuse_light_x + specular_light_x > 1) {
+                shading_buffer.ptr(y)[x].x = (uchar)((ambinent_light_x + diffuse_light_x + specular_light_x) * 255);
+                shading_buffer.ptr(y)[x].y = (uchar)((ambinent_light_y + diffuse_light_y + specular_light_y) * 255);
+                shading_buffer.ptr(y)[x].z = (uchar)((ambinent_light_z + diffuse_light_z + specular_light_z) * 255);
+                if (ambinent_light_x + diffuse_light_x + specular_light_x > 1)
+                {
                     shading_buffer.ptr(y)[x].x = 255;
                 }
-                if (ambinent_light_y + diffuse_light_y + specular_light_y > 1) {
+                if (ambinent_light_y + diffuse_light_y + specular_light_y > 1)
+                {
                     shading_buffer.ptr(y)[x].y = 255;
                 }
-                if (ambinent_light_z + diffuse_light_z + specular_light_z > 1) {
+                if (ambinent_light_z + diffuse_light_z + specular_light_z > 1)
+                {
                     shading_buffer.ptr(y)[x].z = 255;
                 }
             }
@@ -266,7 +278,8 @@ namespace DWIO {
                                    const CameraConfiguration &cam_parameters,
                                    const float3 init_pos,
                                    cv::Mat &shading_img,
-                                   const Eigen::Matrix4d &pose) {
+                                   const Eigen::Matrix4d &pose)
+            {
                 ITMVoxel_d *localVBA = scene->localVBA.GetVoxelBlocks();
                 ITMHashEntry *hashTable = scene->index.GetEntries();
 
@@ -277,13 +290,13 @@ namespace DWIO {
                 cv::Scalar value = cv::Scalar(0, 0, 0);
                 shading_buffer.setTo(value);
 
-                raycast_tsdf_kernel<<<blocks, threads>>>
-                        (localVBA, hashTable, shading_buffer, voxel_scale, truncation_distance, cam_parameters, init_pos,
-                         pose.block(0, 0, 3, 3).cast<float>(),
-                         pose.block(0, 3, 3, 1).cast<float>());
+                raycast_tsdf_kernel<<<blocks, threads>>>(localVBA, hashTable, shading_buffer, voxel_scale, truncation_distance, cam_parameters, init_pos,
+                                                         pose.block(0, 0, 3, 3).cast<float>(),
+                                                         pose.block(0, 3, 3, 1).cast<float>());
 
                 cudaError_t cudaStatus = cudaGetLastError();
-                if (cudaStatus != cudaSuccess) {
+                if (cudaStatus != cudaSuccess)
+                {
                     fprintf(stderr, "[Surface Prediction] CUDA error: %s\n", cudaGetErrorString(cudaStatus));
                 }
 

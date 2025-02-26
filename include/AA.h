@@ -1,15 +1,15 @@
-#ifndef DWIO_ANDERSONACCELERATION_H
-#define DWIO_ANDERSONACCELERATION_H
+#ifndef AA_H
+#define AA_H
 
 #include <fstream>
 #include <vector>
 #include "data.h"
 
-class AndersonAcceleration
+class AA
 {
 
 public:
-    AndersonAcceleration()
+    AA()
         : m_(-1), dim_(-1), iter_(-1), col_idx_(-1) {}
 
     const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> compute(const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> g)
